@@ -138,15 +138,11 @@ export default function LoginPage() {
               />
             </div>
 
-            {/* 비밀번호 찾기 링크 (플레이스홀더) */}
+            {/* 비밀번호 찾기 링크 */}
             <div className="text-right">
               <Link 
-                href="#" 
+                href="/auth/reset-password" 
                 className="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
-                onClick={(e) => {
-                  e.preventDefault()
-                  alert('비밀번호 찾기 기능은 향후 구현 예정입니다.')
-                }}
               >
                 비밀번호를 잊으셨나요?
               </Link>
