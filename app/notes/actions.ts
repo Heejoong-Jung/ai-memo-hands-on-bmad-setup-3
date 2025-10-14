@@ -6,8 +6,9 @@
 'use server';
 
 import { createClient } from '@/lib/supabase/server';
-import { createNote } from '@/lib/db/notes';
+import { createNote, getNotesByUserIdPaginated } from '@/lib/db/notes';
 import { redirect } from 'next/navigation';
+import type { Note } from '@/drizzle/schema';
 
 /**
  * 노트 생성 Server Action
@@ -54,5 +55,46 @@ export async function createNoteAction(formData: FormData) {
 
   // 성공 시 리다이렉트
   redirect('/notes');
+}
+
+/**
+ * 노트 목록 조회 Server Action (페이지네이션 지원)
+ * @param page - 페이지 번호 (1부터 시작)
+ * @param pageSize - 페이지당 항목 수 (기본값: 20)
+ * @returns 노트 목록, 전체 개수, 에러 메시지
+ */
+export async function getNotesAction(
+  page: number = 1,
+  pageSize: number = 20
+): Promise<{ notes: Note[]; total: number; error?: string }> {
+  const supabase = await createClient();
+
+  // 사용자 인증 확인
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+
+  if (authError || !user) {
+    return { notes: [], total: 0, error: '로그인이 필요합니다.' };
+  }
+
+  try {
+    // 노트 목록 조회 (페이지네이션)
+    const { notes, total } = await getNotesByUserIdPaginated(
+      user.id,
+      page,
+      pageSize
+    );
+
+    return { notes, total };
+  } catch (error) {
+    console.error('노트 조회 에러:', error);
+    return {
+      notes: [],
+      total: 0,
+      error: '노트를 불러오는 중 오류가 발생했습니다.',
+    };
+  }
 }
 

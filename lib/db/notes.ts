@@ -5,7 +5,7 @@
 
 import { db } from './client';
 import { notes, type Note, type NewNote } from '@/drizzle/schema';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, desc, sql, count } from 'drizzle-orm';
 
 /**
  * 새로운 노트 생성
@@ -104,5 +104,41 @@ export async function deleteNote(
     .returning();
 
   return result.length > 0;
+}
+
+/**
+ * 사용자의 노트 목록 조회 (페이지네이션 지원)
+ * @param userId - 사용자 ID
+ * @param page - 페이지 번호 (1부터 시작)
+ * @param pageSize - 페이지당 항목 수
+ * @returns 노트 배열 및 전체 개수
+ */
+export async function getNotesByUserIdPaginated(
+  userId: string,
+  page: number = 1,
+  pageSize: number = 20
+): Promise<{ notes: Note[]; total: number }> {
+  // OFFSET 계산
+  const offset = (page - 1) * pageSize;
+
+  // 노트 조회 (최신순, 페이지네이션)
+  const notesList = await db
+    .select()
+    .from(notes)
+    .where(eq(notes.userId, userId))
+    .orderBy(desc(notes.createdAt))
+    .limit(pageSize)
+    .offset(offset);
+
+  // 전체 노트 개수 조회
+  const totalResult = await db
+    .select({ count: count() })
+    .from(notes)
+    .where(eq(notes.userId, userId));
+
+  return {
+    notes: notesList,
+    total: totalResult[0]?.count || 0,
+  };
 }
 

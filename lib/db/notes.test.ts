@@ -20,8 +20,14 @@ vi.mock('./client', () => ({
 }));
 
 // 모킹 후 함수 임포트
-const { createNote, getNotesByUserId, getNoteById, updateNote, deleteNote } =
-  await import('./notes');
+const {
+  createNote,
+  getNotesByUserId,
+  getNoteById,
+  updateNote,
+  deleteNote,
+  getNotesByUserIdPaginated,
+} = await import('./notes');
 
 describe('Notes CRUD Functions', () => {
   const mockUserId = 'user-123';
@@ -239,6 +245,126 @@ describe('Notes CRUD Functions', () => {
       const result = await deleteNote(mockNoteId, mockOtherUserId);
 
       expect(result).toBe(false);
+    });
+  });
+
+  describe('getNotesByUserIdPaginated', () => {
+    it('성공: 페이지 1 조회 (20개)', async () => {
+      const mockNotes = Array.from({ length: 20 }, (_, i) => ({
+        id: `note-${i}`,
+        userId: mockUserId,
+        title: `Note ${i}`,
+        content: `Content ${i}`,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }));
+
+      mockDb.select.mockReturnValueOnce({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            orderBy: vi.fn().mockReturnValue({
+              limit: vi.fn().mockReturnValue({
+                offset: vi.fn().mockResolvedValue(mockNotes),
+              }),
+            }),
+          }),
+        }),
+      });
+
+      mockDb.select.mockReturnValueOnce({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockResolvedValue([{ count: 25 }]),
+        }),
+      });
+
+      const result = await getNotesByUserIdPaginated(mockUserId, 1, 20);
+
+      expect(result.notes).toHaveLength(20);
+      expect(result.total).toBe(25);
+    });
+
+    it('성공: 페이지 2 조회 (OFFSET 적용)', async () => {
+      const mockNotes = Array.from({ length: 5 }, (_, i) => ({
+        id: `note-${i + 20}`,
+        userId: mockUserId,
+        title: `Note ${i + 20}`,
+        content: `Content ${i + 20}`,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }));
+
+      mockDb.select.mockReturnValueOnce({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            orderBy: vi.fn().mockReturnValue({
+              limit: vi.fn().mockReturnValue({
+                offset: vi.fn().mockResolvedValue(mockNotes),
+              }),
+            }),
+          }),
+        }),
+      });
+
+      mockDb.select.mockReturnValueOnce({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockResolvedValue([{ count: 25 }]),
+        }),
+      });
+
+      const result = await getNotesByUserIdPaginated(mockUserId, 2, 20);
+
+      expect(result.notes).toHaveLength(5);
+      expect(result.total).toBe(25);
+    });
+
+    it('빈 목록: 노트가 없는 경우', async () => {
+      mockDb.select.mockReturnValueOnce({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            orderBy: vi.fn().mockReturnValue({
+              limit: vi.fn().mockReturnValue({
+                offset: vi.fn().mockResolvedValue([]),
+              }),
+            }),
+          }),
+        }),
+      });
+
+      mockDb.select.mockReturnValueOnce({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockResolvedValue([{ count: 0 }]),
+        }),
+      });
+
+      const result = await getNotesByUserIdPaginated(mockUserId, 1, 20);
+
+      expect(result.notes).toHaveLength(0);
+      expect(result.total).toBe(0);
+    });
+
+    it('권한: 다른 사용자의 노트는 조회되지 않음', async () => {
+      mockDb.select.mockReturnValueOnce({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            orderBy: vi.fn().mockReturnValue({
+              limit: vi.fn().mockReturnValue({
+                offset: vi.fn().mockResolvedValue([]),
+              }),
+            }),
+          }),
+        }),
+      });
+
+      mockDb.select.mockReturnValueOnce({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockResolvedValue([{ count: 0 }]),
+        }),
+      });
+
+      const result = await getNotesByUserIdPaginated(mockOtherUserId, 1, 20);
+
+      expect(result.notes).toHaveLength(0);
+      expect(result.total).toBe(0);
     });
   });
 });
