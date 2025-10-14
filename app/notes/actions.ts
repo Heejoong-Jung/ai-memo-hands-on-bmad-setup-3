@@ -18,6 +18,10 @@ import {
 } from '@/lib/db/notes';
 import { redirect } from 'next/navigation';
 import type { Note } from '@/drizzle/schema';
+import { generateSummary } from '@/lib/ai/gemini';
+import { createSummary, deleteSummaryByNoteId } from '@/lib/db/summaries';
+import { RateLimitError, TimeoutError } from '@/lib/ai/types';
+import { revalidatePath } from 'next/cache';
 
 /**
  * 노트 생성 Server Action
@@ -339,6 +343,63 @@ export async function getDeletedNotesAction(): Promise<{
       notes: [],
       error: '삭제된 노트를 불러오는 중 오류가 발생했습니다.',
     };
+  }
+}
+
+/**
+ * AI 요약 생성 Server Action
+ * @param noteId - 노트 ID
+ * @returns 성공 시 생성된 요약, 실패 시 에러 메시지
+ */
+export async function generateSummaryAction(
+  noteId: string
+): Promise<{ success?: boolean; summary?: string; error?: string }> {
+  const supabase = await createClient();
+
+  // 사용자 인증 확인
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+
+  if (authError || !user) {
+    return { error: '로그인이 필요합니다.' };
+  }
+
+  try {
+    // 노트 권한 확인
+    const note = await getNoteById(noteId, user.id);
+    if (!note) {
+      return { error: '노트를 찾을 수 없거나 권한이 없습니다.' };
+    }
+
+    // 기존 요약 삭제 (재생성)
+    await deleteSummaryByNoteId(noteId, user.id);
+
+    // Gemini API로 요약 생성
+    const summaryContent = await generateSummary(note.content);
+
+    // DB에 요약 저장
+    await createSummary(noteId, 'gemini-2.0-flash', summaryContent);
+
+    // 페이지 재검증
+    revalidatePath(`/notes/${noteId}`);
+
+    return { success: true, summary: summaryContent };
+  } catch (error) {
+    console.error('요약 생성 에러:', error);
+
+    // 에러 타입에 따른 메시지
+    if (error instanceof RateLimitError) {
+      return {
+        error: 'API 요청 한도를 초과했습니다. 잠시 후 다시 시도해주세요.',
+      };
+    }
+    if (error instanceof TimeoutError) {
+      return { error: '요청 시간이 초과되었습니다. 다시 시도해주세요.' };
+    }
+
+    return { error: 'AI 요약 생성 중 오류가 발생했습니다.' };
   }
 }
 

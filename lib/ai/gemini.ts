@@ -10,6 +10,7 @@ import {
   RateLimitError,
   TimeoutError,
 } from './types';
+import { truncateToTokenLimit } from './token-utils';
 
 // Gemini API 클라이언트 초기화 (lazy)
 let ai: GoogleGenAI | null = null;
@@ -156,6 +157,32 @@ export async function testGeminiConnection(): Promise<boolean> {
   } catch (error) {
     console.error('Gemini 연결 테스트 실패:', error);
     return false;
+  }
+}
+
+/**
+ * 노트 내용을 기반으로 요약 생성
+ * @param noteContent - 노트 내용
+ * @returns 3-6개 불릿 포인트 요약 (마크다운 형식)
+ */
+export async function generateSummary(noteContent: string): Promise<string> {
+  // 토큰 제한 체크 및 자르기
+  const truncatedContent = truncateToTokenLimit(noteContent);
+
+  // 요약 프롬프트
+  const prompt = `다음 노트의 핵심 내용을 3-6개의 불릿 포인트로 요약해주세요. 각 불릿 포인트는 명확하고 간결해야 하며, 마크다운 형식(- 또는 *)을 사용하세요.
+
+노트 내용:
+${truncatedContent}
+
+요약:`;
+
+  try {
+    const summary = await generateText(prompt, 'gemini-2.0-flash');
+    return summary.trim();
+  } catch (error) {
+    console.error('요약 생성 실패:', error);
+    throw handleGeminiError(error);
   }
 }
 

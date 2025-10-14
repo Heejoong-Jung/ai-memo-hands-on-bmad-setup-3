@@ -13,6 +13,7 @@ import {
   restoreNoteAction,
   hardDeleteNoteAction,
   getDeletedNotesAction,
+  generateSummaryAction,
 } from './actions';
 
 // 모킹 설정
@@ -31,8 +32,22 @@ vi.mock('@/lib/db/notes', () => ({
   getDeletedNotesByUserId: vi.fn(),
 }));
 
+vi.mock('@/lib/db/summaries', () => ({
+  createSummary: vi.fn(),
+  getSummaryByNoteId: vi.fn(),
+  deleteSummaryByNoteId: vi.fn(),
+}));
+
+vi.mock('@/lib/ai/gemini', () => ({
+  generateSummary: vi.fn(),
+}));
+
 vi.mock('next/navigation', () => ({
   redirect: vi.fn(),
+}));
+
+vi.mock('next/cache', () => ({
+  revalidatePath: vi.fn(),
 }));
 
 describe('createNoteAction', () => {
@@ -1057,6 +1072,218 @@ describe('getDeletedNotesAction', () => {
     expect(result).toEqual({
       notes: [],
       error: '삭제된 노트를 불러오는 중 오류가 발생했습니다.',
+    });
+  });
+});
+
+describe('generateSummaryAction', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('인증되지 않은 사용자는 요약을 생성할 수 없다', async () => {
+    const { createClient } = await import('@/lib/supabase/server');
+    vi.mocked(createClient).mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: null },
+          error: new Error('Not authenticated'),
+        }),
+      },
+    } as any);
+
+    const result = await generateSummaryAction('note-id');
+
+    expect(result).toEqual({ error: '로그인이 필요합니다.' });
+  });
+
+  it('존재하지 않는 노트는 요약을 생성할 수 없다', async () => {
+    const { createClient } = await import('@/lib/supabase/server');
+    vi.mocked(createClient).mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: { id: 'user-123' } },
+          error: null,
+        }),
+      },
+    } as any);
+
+    const { getNoteById } = await import('@/lib/db/notes');
+    vi.mocked(getNoteById).mockResolvedValue(null);
+
+    const result = await generateSummaryAction('non-existent-note');
+
+    expect(result).toEqual({
+      error: '노트를 찾을 수 없거나 권한이 없습니다.',
+    });
+  });
+
+  it('요약을 성공적으로 생성한다', async () => {
+    const { createClient } = await import('@/lib/supabase/server');
+    vi.mocked(createClient).mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: { id: 'user-123' } },
+          error: null,
+        }),
+      },
+    } as any);
+
+    const mockNote = {
+      id: 'note-123',
+      userId: 'user-123',
+      title: '테스트 노트',
+      content: '오늘 배운 내용을 정리한다.',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      deletedAt: null,
+    };
+
+    const { getNoteById } = await import('@/lib/db/notes');
+    vi.mocked(getNoteById).mockResolvedValue(mockNote);
+
+    const { deleteSummaryByNoteId } = await import('@/lib/db/summaries');
+    vi.mocked(deleteSummaryByNoteId).mockResolvedValue(true);
+
+    const { generateSummary } = await import('@/lib/ai/gemini');
+    vi.mocked(generateSummary).mockResolvedValue(
+      '- 포인트 1\n- 포인트 2\n- 포인트 3'
+    );
+
+    const { createSummary } = await import('@/lib/db/summaries');
+    vi.mocked(createSummary).mockResolvedValue({
+      id: 'summary-123',
+      noteId: 'note-123',
+      model: 'gemini-2.0-flash',
+      content: '- 포인트 1\n- 포인트 2\n- 포인트 3',
+      createdAt: new Date(),
+    });
+
+    const result = await generateSummaryAction('note-123');
+
+    expect(result).toEqual({
+      success: true,
+      summary: '- 포인트 1\n- 포인트 2\n- 포인트 3',
+    });
+    expect(deleteSummaryByNoteId).toHaveBeenCalledWith('note-123', 'user-123');
+    expect(generateSummary).toHaveBeenCalledWith('오늘 배운 내용을 정리한다.');
+    expect(createSummary).toHaveBeenCalledWith(
+      'note-123',
+      'gemini-2.0-flash',
+      '- 포인트 1\n- 포인트 2\n- 포인트 3'
+    );
+  });
+
+  it('Rate Limit 에러 발생 시 적절한 메시지를 반환한다', async () => {
+    const { createClient } = await import('@/lib/supabase/server');
+    vi.mocked(createClient).mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: { id: 'user-123' } },
+          error: null,
+        }),
+      },
+    } as any);
+
+    const mockNote = {
+      id: 'note-123',
+      userId: 'user-123',
+      title: '테스트 노트',
+      content: '테스트 내용',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      deletedAt: null,
+    };
+
+    const { getNoteById } = await import('@/lib/db/notes');
+    vi.mocked(getNoteById).mockResolvedValue(mockNote);
+
+    const { deleteSummaryByNoteId } = await import('@/lib/db/summaries');
+    vi.mocked(deleteSummaryByNoteId).mockResolvedValue(true);
+
+    const { RateLimitError } = await import('@/lib/ai/types');
+    const { generateSummary } = await import('@/lib/ai/gemini');
+    vi.mocked(generateSummary).mockRejectedValue(new RateLimitError());
+
+    const result = await generateSummaryAction('note-123');
+
+    expect(result).toEqual({
+      error: 'API 요청 한도를 초과했습니다. 잠시 후 다시 시도해주세요.',
+    });
+  });
+
+  it('Timeout 에러 발생 시 적절한 메시지를 반환한다', async () => {
+    const { createClient } = await import('@/lib/supabase/server');
+    vi.mocked(createClient).mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: { id: 'user-123' } },
+          error: null,
+        }),
+      },
+    } as any);
+
+    const mockNote = {
+      id: 'note-123',
+      userId: 'user-123',
+      title: '테스트 노트',
+      content: '테스트 내용',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      deletedAt: null,
+    };
+
+    const { getNoteById } = await import('@/lib/db/notes');
+    vi.mocked(getNoteById).mockResolvedValue(mockNote);
+
+    const { deleteSummaryByNoteId } = await import('@/lib/db/summaries');
+    vi.mocked(deleteSummaryByNoteId).mockResolvedValue(true);
+
+    const { TimeoutError } = await import('@/lib/ai/types');
+    const { generateSummary } = await import('@/lib/ai/gemini');
+    vi.mocked(generateSummary).mockRejectedValue(new TimeoutError());
+
+    const result = await generateSummaryAction('note-123');
+
+    expect(result).toEqual({
+      error: '요청 시간이 초과되었습니다. 다시 시도해주세요.',
+    });
+  });
+
+  it('일반 에러 발생 시 기본 에러 메시지를 반환한다', async () => {
+    const { createClient } = await import('@/lib/supabase/server');
+    vi.mocked(createClient).mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: { id: 'user-123' } },
+          error: null,
+        }),
+      },
+    } as any);
+
+    const mockNote = {
+      id: 'note-123',
+      userId: 'user-123',
+      title: '테스트 노트',
+      content: '테스트 내용',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      deletedAt: null,
+    };
+
+    const { getNoteById } = await import('@/lib/db/notes');
+    vi.mocked(getNoteById).mockResolvedValue(mockNote);
+
+    const { deleteSummaryByNoteId } = await import('@/lib/db/summaries');
+    vi.mocked(deleteSummaryByNoteId).mockResolvedValue(true);
+
+    const { generateSummary } = await import('@/lib/ai/gemini');
+    vi.mocked(generateSummary).mockRejectedValue(new Error('Unknown error'));
+
+    const result = await generateSummaryAction('note-123');
+
+    expect(result).toEqual({
+      error: 'AI 요약 생성 중 오류가 발생했습니다.',
     });
   });
 });

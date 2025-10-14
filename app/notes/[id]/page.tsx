@@ -7,9 +7,11 @@ import { createClient } from '@/lib/supabase/server';
 import { redirect, notFound } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { getNoteById } from '@/lib/db/notes';
+import { getSummaryByNoteId } from '@/lib/db/summaries';
 import { DeleteNoteButton } from './delete-button';
+import { SummaryButton } from './summary-button';
 
 type Params = Promise<{ id: string }>;
 
@@ -33,6 +35,9 @@ export default async function NoteDetailPage(props: { params: Params }) {
   if (!note) {
     notFound();
   }
+
+  // 요약 조회
+  const summary = await getSummaryByNoteId(params.id, user.id);
 
   // 날짜 포맷팅 (한국어 형식)
   const formatDate = (date: Date | null) => {
@@ -78,6 +83,30 @@ export default async function NoteDetailPage(props: { params: Params }) {
             {note.content}
           </p>
         </div>
+      </Card>
+
+      {/* AI 요약 카드 */}
+      <Card className="mt-6">
+        <CardHeader>
+          <CardTitle className="flex justify-between items-center">
+            <span>AI 요약</span>
+            <SummaryButton noteId={note.id} hasSummary={!!summary} />
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {summary ? (
+            <div className="prose max-w-none">
+              <div className="whitespace-pre-wrap leading-relaxed text-base">
+                {summary.content}
+              </div>
+            </div>
+          ) : (
+            <p className="text-muted-foreground">
+              AI가 노트의 핵심 내용을 3-6개의 불릿 포인트로 요약해드립니다.
+              위의 "AI 요약 생성" 버튼을 클릭하세요.
+            </p>
+          )}
+        </CardContent>
       </Card>
     </div>
   );

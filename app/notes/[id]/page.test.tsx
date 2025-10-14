@@ -8,6 +8,7 @@ import { render, screen } from '@testing-library/react';
 import NoteDetailPage from './page';
 import { redirect, notFound } from 'next/navigation';
 import * as notesDb from '@/lib/db/notes';
+import * as summariesDb from '@/lib/db/summaries';
 
 // Mock modules
 vi.mock('next/navigation', () => ({
@@ -29,6 +30,10 @@ vi.mock('@/lib/supabase/server', () => ({
 
 vi.mock('@/lib/db/notes', () => ({
   getNoteById: vi.fn(),
+}));
+
+vi.mock('@/lib/db/summaries', () => ({
+  getSummaryByNoteId: vi.fn(),
 }));
 
 // Mock Next.js Link component
@@ -106,6 +111,7 @@ describe('NoteDetailPage', () => {
     } as any);
 
     vi.mocked(notesDb.getNoteById).mockResolvedValue(mockNote);
+    vi.mocked(summariesDb.getSummaryByNoteId).mockResolvedValue(null);
 
     const params = Promise.resolve({ id: 'note-123' });
     const component = await NoteDetailPage({ params });
@@ -137,6 +143,7 @@ describe('NoteDetailPage', () => {
     } as any);
 
     vi.mocked(notesDb.getNoteById).mockResolvedValue(mockNote);
+    vi.mocked(summariesDb.getSummaryByNoteId).mockResolvedValue(null);
 
     const params = Promise.resolve({ id: 'note-123' });
     const component = await NoteDetailPage({ params });
@@ -158,6 +165,7 @@ describe('NoteDetailPage', () => {
     } as any);
 
     vi.mocked(notesDb.getNoteById).mockResolvedValue(mockNote);
+    vi.mocked(summariesDb.getSummaryByNoteId).mockResolvedValue(null);
 
     const params = Promise.resolve({ id: 'note-123' });
     const component = await NoteDetailPage({ params });
@@ -185,6 +193,7 @@ describe('NoteDetailPage', () => {
     } as any);
 
     vi.mocked(notesDb.getNoteById).mockResolvedValue(mockNote);
+    vi.mocked(summariesDb.getSummaryByNoteId).mockResolvedValue(null);
 
     const params = Promise.resolve({ id: 'note-123' });
     const component = await NoteDetailPage({ params });

@@ -296,5 +296,132 @@ describe('gemini', () => {
       await expect(generateText('Test')).rejects.toThrow(TimeoutError);
     });
   });
+
+  describe('generateSummary', () => {
+    it('노트 내용을 요약으로 변환한다', async () => {
+      const mockResponse = {
+        text: '- 포인트 1\n- 포인트 2\n- 포인트 3',
+      };
+
+      const { GoogleGenAI } = await import('@google/genai');
+      const mockGenerateContent = vi.fn().mockResolvedValue(mockResponse);
+
+      (GoogleGenAI as unknown as ReturnType<typeof vi.fn>).mockImplementation(
+        () => ({
+          models: {
+            generateContent: mockGenerateContent,
+          },
+        })
+      );
+
+      vi.resetModules();
+      process.env.GEMINI_API_KEY = 'test-api-key';
+      const { generateSummary } = await import('./gemini');
+
+      const noteContent = '오늘은 AI 기술에 대해 공부했다. 특히 Gemini API를 사용하는 방법을 배웠고, 요약 기능을 구현하는 과정이 흥미로웠다.';
+      const result = await generateSummary(noteContent);
+
+      expect(result).toBe('- 포인트 1\n- 포인트 2\n- 포인트 3');
+      expect(mockGenerateContent).toHaveBeenCalled();
+    });
+
+    it('긴 노트 내용은 토큰 제한으로 잘린다', async () => {
+      const mockResponse = {
+        text: '- 요약 포인트 1\n- 요약 포인트 2',
+      };
+
+      const { GoogleGenAI } = await import('@google/genai');
+      const mockGenerateContent = vi.fn().mockResolvedValue(mockResponse);
+
+      (GoogleGenAI as unknown as ReturnType<typeof vi.fn>).mockImplementation(
+        () => ({
+          models: {
+            generateContent: mockGenerateContent,
+          },
+        })
+      );
+
+      vi.resetModules();
+      process.env.GEMINI_API_KEY = 'test-api-key';
+      const { generateSummary } = await import('./gemini');
+
+      // 토큰 제한을 초과하는 긴 텍스트 (약 35,000자)
+      const longContent = 'a'.repeat(35000);
+      const result = await generateSummary(longContent);
+
+      expect(result).toBe('- 요약 포인트 1\n- 요약 포인트 2');
+      // truncateToTokenLimit이 호출되어 텍스트가 잘렸는지 확인
+      const callArgs = mockGenerateContent.mock.calls[0][0];
+      expect(callArgs.contents.length).toBeLessThan(longContent.length + 200);
+    });
+
+    it('요약 생성 실패 시 에러를 throw한다', async () => {
+      const { GoogleGenAI } = await import('@google/genai');
+      const mockGenerateContent = vi
+        .fn()
+        .mockRejectedValue(new Error('API error'));
+
+      (GoogleGenAI as unknown as ReturnType<typeof vi.fn>).mockImplementation(
+        () => ({
+          models: {
+            generateContent: mockGenerateContent,
+          },
+        })
+      );
+
+      vi.resetModules();
+      process.env.GEMINI_API_KEY = 'test-api-key';
+      const { generateSummary } = await import('./gemini');
+
+      await expect(generateSummary('테스트 노트')).rejects.toThrow();
+    });
+
+    it('공백이 포함된 응답을 trim 처리한다', async () => {
+      const mockResponse = {
+        text: '  - 포인트 1\n- 포인트 2  \n',
+      };
+
+      const { GoogleGenAI } = await import('@google/genai');
+      const mockGenerateContent = vi.fn().mockResolvedValue(mockResponse);
+
+      (GoogleGenAI as unknown as ReturnType<typeof vi.fn>).mockImplementation(
+        () => ({
+          models: {
+            generateContent: mockGenerateContent,
+          },
+        })
+      );
+
+      vi.resetModules();
+      process.env.GEMINI_API_KEY = 'test-api-key';
+      const { generateSummary } = await import('./gemini');
+
+      const result = await generateSummary('테스트 노트');
+
+      expect(result).toBe('- 포인트 1\n- 포인트 2');
+    });
+
+    it('Rate Limit 에러 발생 시 적절히 처리한다', async () => {
+      const { GoogleGenAI } = await import('@google/genai');
+      const mockGenerateContent = vi
+        .fn()
+        .mockRejectedValue(new Error('429 Rate limit exceeded'));
+
+      (GoogleGenAI as unknown as ReturnType<typeof vi.fn>).mockImplementation(
+        () => ({
+          models: {
+            generateContent: mockGenerateContent,
+          },
+        })
+      );
+
+      vi.resetModules();
+      process.env.GEMINI_API_KEY = 'test-api-key';
+      const { generateSummary } = await import('./gemini');
+      const { RateLimitError } = await import('./types');
+
+      await expect(generateSummary('테스트')).rejects.toThrow(RateLimitError);
+    });
+  });
 });
 
