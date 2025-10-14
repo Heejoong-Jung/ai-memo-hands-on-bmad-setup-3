@@ -57,8 +57,16 @@ export default async function Home() {
                   사용자 ID: <span className="font-mono text-xs">{user.id}</span>
                 </p>
               </div>
+              <div className="flex gap-4">
+                <Button asChild size="lg" className="flex-1">
+                  <Link href="/notes">📝 내 메모 보기</Link>
+                </Button>
+                <Button asChild size="lg" variant="outline" className="flex-1">
+                  <Link href="/notes/new">✏️ 새 메모 작성</Link>
+                </Button>
+              </div>
               <p className="text-gray-600 dark:text-gray-400">
-                메모 관리 기능은 곧 추가될 예정입니다.
+                메모를 작성하고 관리하세요. AI 요약 및 태깅 기능이 곧 추가됩니다.
               </p>
             </div>
           ) : (
@@ -81,7 +89,7 @@ export default async function Home() {
           <ul className="list-disc list-inside space-y-2">
             <li>✅ 회원가입 기능</li>
             <li>✅ 로그인 기능</li>
-            <li>⏳ 메모 관리 (개발 예정)</li>
+            <li>✅ 메모 관리 (생성, 조회, 수정, 삭제, 휴지통)</li>
             <li>⏳ 음성 메모 변환 (개발 예정)</li>
             <li>⏳ AI 요약 및 태깅 (개발 예정)</li>
           </ul>

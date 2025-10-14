@@ -99,10 +99,16 @@ export async function getNotesAction(
     return { notes, total };
   } catch (error) {
     console.error('노트 조회 에러:', error);
+    console.error('에러 상세:', {
+      message: error instanceof Error ? error.message : '알 수 없는 에러',
+      userId: user.id,
+      page,
+      pageSize,
+    });
     return {
       notes: [],
       total: 0,
-      error: '노트를 불러오는 중 오류가 발생했습니다.',
+      error: '노트를 불러오는 중 오류가 발생했습니다. 데이터베이스 연결을 확인해주세요.',
     };
   }
 }
