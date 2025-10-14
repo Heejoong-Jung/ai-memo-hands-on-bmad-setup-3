@@ -1,10 +1,19 @@
 // app/notes/actions.test.ts
 // 노트 관련 Server Actions 테스트
-// createNoteAction, getNotesAction의 유효성 검증 및 인증 확인 테스트
+// createNoteAction, getNotesAction, getNoteByIdAction의 유효성 검증 및 인증 확인 테스트
 // 관련 파일: app/notes/actions.ts, lib/db/notes.ts
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createNoteAction, getNotesAction } from './actions';
+import {
+  createNoteAction,
+  getNotesAction,
+  getNoteByIdAction,
+  updateNoteAction,
+  softDeleteNoteAction,
+  restoreNoteAction,
+  hardDeleteNoteAction,
+  getDeletedNotesAction,
+} from './actions';
 
 // 모킹 설정
 vi.mock('@/lib/supabase/server', () => ({
@@ -14,6 +23,12 @@ vi.mock('@/lib/supabase/server', () => ({
 vi.mock('@/lib/db/notes', () => ({
   createNote: vi.fn(),
   getNotesByUserIdPaginated: vi.fn(),
+  getNoteById: vi.fn(),
+  updateNote: vi.fn(),
+  softDeleteNote: vi.fn(),
+  restoreNote: vi.fn(),
+  hardDeleteNote: vi.fn(),
+  getDeletedNotesByUserId: vi.fn(),
 }));
 
 vi.mock('next/navigation', () => ({
@@ -347,6 +362,701 @@ describe('getNotesAction', () => {
       notes: [],
       total: 0,
       error: '노트를 불러오는 중 오류가 발생했습니다.',
+    });
+  });
+});
+
+describe('getNoteByIdAction', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('인증되지 않은 사용자는 노트를 조회할 수 없다', async () => {
+    const { createClient } = await import('@/lib/supabase/server');
+    vi.mocked(createClient).mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: null },
+          error: new Error('Not authenticated'),
+        }),
+      },
+    } as any);
+
+    const result = await getNoteByIdAction('note-123');
+
+    expect(result).toEqual({
+      note: null,
+      error: '로그인이 필요합니다.',
+    });
+  });
+
+  it('정상적으로 노트를 조회한다', async () => {
+    const { createClient } = await import('@/lib/supabase/server');
+    const { getNoteById } = await import('@/lib/db/notes');
+
+    const mockNote = {
+      id: 'note-123',
+      userId: 'user-123',
+      title: '테스트 노트',
+      content: '테스트 내용',
+      createdAt: new Date('2024-01-01'),
+      updatedAt: new Date('2024-01-01'),
+    };
+
+    vi.mocked(createClient).mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: { id: 'user-123' } },
+          error: null,
+        }),
+      },
+    } as any);
+
+    vi.mocked(getNoteById).mockResolvedValue(mockNote);
+
+    const result = await getNoteByIdAction('note-123');
+
+    expect(result).toEqual({ note: mockNote });
+    expect(getNoteById).toHaveBeenCalledWith('note-123', 'user-123');
+  });
+
+  it('존재하지 않는 노트 조회 시 에러를 반환한다', async () => {
+    const { createClient } = await import('@/lib/supabase/server');
+    const { getNoteById } = await import('@/lib/db/notes');
+
+    vi.mocked(createClient).mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: { id: 'user-123' } },
+          error: null,
+        }),
+      },
+    } as any);
+
+    vi.mocked(getNoteById).mockResolvedValue(null);
+
+    const result = await getNoteByIdAction('non-existent');
+
+    expect(result).toEqual({
+      note: null,
+      error: '노트를 찾을 수 없습니다.',
+    });
+  });
+
+  it('다른 사용자의 노트 조회 시 에러를 반환한다', async () => {
+    const { createClient } = await import('@/lib/supabase/server');
+    const { getNoteById } = await import('@/lib/db/notes');
+
+    vi.mocked(createClient).mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: { id: 'user-123' } },
+          error: null,
+        }),
+      },
+    } as any);
+
+    // 다른 사용자의 노트이므로 null 반환
+    vi.mocked(getNoteById).mockResolvedValue(null);
+
+    const result = await getNoteByIdAction('other-user-note');
+
+    expect(result).toEqual({
+      note: null,
+      error: '노트를 찾을 수 없습니다.',
+    });
+  });
+
+  it('데이터베이스 에러 발생 시 에러 메시지를 반환한다', async () => {
+    const { createClient } = await import('@/lib/supabase/server');
+    const { getNoteById } = await import('@/lib/db/notes');
+
+    vi.mocked(createClient).mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: { id: 'user-123' } },
+          error: null,
+        }),
+      },
+    } as any);
+
+    vi.mocked(getNoteById).mockRejectedValue(new Error('Database error'));
+
+    const result = await getNoteByIdAction('note-123');
+
+    expect(result).toEqual({
+      note: null,
+      error: '노트를 불러오는 중 오류가 발생했습니다.',
+    });
+  });
+});
+
+describe('updateNoteAction', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('인증되지 않은 사용자는 노트를 수정할 수 없다', async () => {
+    const { createClient } = await import('@/lib/supabase/server');
+    vi.mocked(createClient).mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: null },
+          error: new Error('Not authenticated'),
+        }),
+      },
+    } as any);
+
+    const result = await updateNoteAction('note-123', {
+      title: '수정된 제목',
+      content: '수정된 내용',
+    });
+
+    expect(result).toEqual({ error: '로그인이 필요합니다.' });
+  });
+
+  it('제목이 비어있으면 에러를 반환한다', async () => {
+    const { createClient } = await import('@/lib/supabase/server');
+    vi.mocked(createClient).mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: { id: 'user-123' } },
+          error: null,
+        }),
+      },
+    } as any);
+
+    const result = await updateNoteAction('note-123', {
+      title: '   ',
+      content: '수정된 내용',
+    });
+
+    expect(result).toEqual({ error: '제목을 입력해주세요.' });
+  });
+
+  it('제목이 200자를 초과하면 에러를 반환한다', async () => {
+    const { createClient } = await import('@/lib/supabase/server');
+    vi.mocked(createClient).mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: { id: 'user-123' } },
+          error: null,
+        }),
+      },
+    } as any);
+
+    const longTitle = 'a'.repeat(201);
+    const result = await updateNoteAction('note-123', {
+      title: longTitle,
+      content: '수정된 내용',
+    });
+
+    expect(result).toEqual({ error: '제목은 최대 200자까지 입력 가능합니다.' });
+  });
+
+  it('본문이 50,000자를 초과하면 에러를 반환한다', async () => {
+    const { createClient } = await import('@/lib/supabase/server');
+    vi.mocked(createClient).mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: { id: 'user-123' } },
+          error: null,
+        }),
+      },
+    } as any);
+
+    const longContent = 'a'.repeat(50001);
+    const result = await updateNoteAction('note-123', {
+      title: '수정된 제목',
+      content: longContent,
+    });
+
+    expect(result).toEqual({ error: '본문은 최대 50,000자까지 입력 가능합니다.' });
+  });
+
+  it('정상적으로 노트를 수정한다', async () => {
+    const { createClient } = await import('@/lib/supabase/server');
+    const { updateNote } = await import('@/lib/db/notes');
+
+    const mockUpdatedNote = {
+      id: 'note-123',
+      userId: 'user-123',
+      title: '수정된 제목',
+      content: '수정된 내용',
+      createdAt: new Date('2024-01-01'),
+      updatedAt: new Date('2024-01-02'),
+    };
+
+    vi.mocked(createClient).mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: { id: 'user-123' } },
+          error: null,
+        }),
+      },
+    } as any);
+
+    vi.mocked(updateNote).mockResolvedValue(mockUpdatedNote);
+
+    const result = await updateNoteAction('note-123', {
+      title: '수정된 제목',
+      content: '수정된 내용',
+    });
+
+    expect(result).toEqual({
+      success: true,
+      note: mockUpdatedNote,
+    });
+    expect(updateNote).toHaveBeenCalledWith(
+      'note-123',
+      'user-123',
+      '수정된 제목',
+      '수정된 내용'
+    );
+  });
+
+  it('존재하지 않는 노트 수정 시 에러를 반환한다', async () => {
+    const { createClient } = await import('@/lib/supabase/server');
+    const { updateNote } = await import('@/lib/db/notes');
+
+    vi.mocked(createClient).mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: { id: 'user-123' } },
+          error: null,
+        }),
+      },
+    } as any);
+
+    vi.mocked(updateNote).mockResolvedValue(null);
+
+    const result = await updateNoteAction('non-existent', {
+      title: '수정된 제목',
+      content: '수정된 내용',
+    });
+
+    expect(result).toEqual({
+      error: '노트를 찾을 수 없거나 수정 권한이 없습니다.',
+    });
+  });
+
+  it('다른 사용자의 노트 수정 시 에러를 반환한다', async () => {
+    const { createClient } = await import('@/lib/supabase/server');
+    const { updateNote } = await import('@/lib/db/notes');
+
+    vi.mocked(createClient).mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: { id: 'user-123' } },
+          error: null,
+        }),
+      },
+    } as any);
+
+    // 다른 사용자의 노트이므로 null 반환
+    vi.mocked(updateNote).mockResolvedValue(null);
+
+    const result = await updateNoteAction('other-user-note', {
+      title: '해킹 시도',
+      content: '해킹 내용',
+    });
+
+    expect(result).toEqual({
+      error: '노트를 찾을 수 없거나 수정 권한이 없습니다.',
+    });
+  });
+
+  it('데이터베이스 에러 발생 시 에러 메시지를 반환한다', async () => {
+    const { createClient } = await import('@/lib/supabase/server');
+    const { updateNote } = await import('@/lib/db/notes');
+
+    vi.mocked(createClient).mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: { id: 'user-123' } },
+          error: null,
+        }),
+      },
+    } as any);
+
+    vi.mocked(updateNote).mockRejectedValue(new Error('Database error'));
+
+    const result = await updateNoteAction('note-123', {
+      title: '수정된 제목',
+      content: '수정된 내용',
+    });
+
+    expect(result).toEqual({
+      error: '노트를 수정하는 중 오류가 발생했습니다.',
+    });
+  });
+});
+
+describe('softDeleteNoteAction', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('인증되지 않은 사용자는 노트를 삭제할 수 없다', async () => {
+    const { createClient } = await import('@/lib/supabase/server');
+    vi.mocked(createClient).mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: null },
+          error: new Error('Not authenticated'),
+        }),
+      },
+    } as any);
+
+    const result = await softDeleteNoteAction('note-123');
+
+    expect(result).toEqual({
+      error: '로그인이 필요합니다.',
+    });
+  });
+
+  it('성공적으로 노트를 소프트 삭제한다', async () => {
+    const { createClient } = await import('@/lib/supabase/server');
+    const { softDeleteNote } = await import('@/lib/db/notes');
+
+    vi.mocked(createClient).mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: { id: 'user-123' } },
+          error: null,
+        }),
+      },
+    } as any);
+
+    vi.mocked(softDeleteNote).mockResolvedValue({
+      id: 'note-123',
+      userId: 'user-123',
+      title: '테스트',
+      content: '내용',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      deletedAt: new Date(),
+    });
+
+    const result = await softDeleteNoteAction('note-123');
+
+    expect(result).toEqual({ success: true });
+  });
+
+  it('존재하지 않는 노트 삭제 시 에러를 반환한다', async () => {
+    const { createClient } = await import('@/lib/supabase/server');
+    const { softDeleteNote } = await import('@/lib/db/notes');
+
+    vi.mocked(createClient).mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: { id: 'user-123' } },
+          error: null,
+        }),
+      },
+    } as any);
+
+    vi.mocked(softDeleteNote).mockResolvedValue(null);
+
+    const result = await softDeleteNoteAction('nonexistent-id');
+
+    expect(result).toEqual({
+      error: '노트를 찾을 수 없거나 삭제 권한이 없습니다.',
+    });
+  });
+
+  it('데이터베이스 에러 발생 시 에러 메시지를 반환한다', async () => {
+    const { createClient } = await import('@/lib/supabase/server');
+    const { softDeleteNote } = await import('@/lib/db/notes');
+
+    vi.mocked(createClient).mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: { id: 'user-123' } },
+          error: null,
+        }),
+      },
+    } as any);
+
+    vi.mocked(softDeleteNote).mockRejectedValue(new Error('Database error'));
+
+    const result = await softDeleteNoteAction('note-123');
+
+    expect(result).toEqual({
+      error: '노트를 삭제하는 중 오류가 발생했습니다.',
+    });
+  });
+});
+
+describe('restoreNoteAction', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('인증되지 않은 사용자는 노트를 복구할 수 없다', async () => {
+    const { createClient } = await import('@/lib/supabase/server');
+    vi.mocked(createClient).mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: null },
+          error: new Error('Not authenticated'),
+        }),
+      },
+    } as any);
+
+    const result = await restoreNoteAction('note-123');
+
+    expect(result).toEqual({
+      error: '로그인이 필요합니다.',
+    });
+  });
+
+  it('성공적으로 노트를 복구한다', async () => {
+    const { createClient } = await import('@/lib/supabase/server');
+    const { restoreNote } = await import('@/lib/db/notes');
+
+    vi.mocked(createClient).mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: { id: 'user-123' } },
+          error: null,
+        }),
+      },
+    } as any);
+
+    vi.mocked(restoreNote).mockResolvedValue({
+      id: 'note-123',
+      userId: 'user-123',
+      title: '테스트',
+      content: '내용',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      deletedAt: null,
+    });
+
+    const result = await restoreNoteAction('note-123');
+
+    expect(result).toEqual({ success: true });
+  });
+
+  it('존재하지 않는 노트 복구 시 에러를 반환한다', async () => {
+    const { createClient } = await import('@/lib/supabase/server');
+    const { restoreNote } = await import('@/lib/db/notes');
+
+    vi.mocked(createClient).mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: { id: 'user-123' } },
+          error: null,
+        }),
+      },
+    } as any);
+
+    vi.mocked(restoreNote).mockResolvedValue(null);
+
+    const result = await restoreNoteAction('nonexistent-id');
+
+    expect(result).toEqual({
+      error: '노트를 찾을 수 없거나 복구 권한이 없습니다.',
+    });
+  });
+
+  it('데이터베이스 에러 발생 시 에러 메시지를 반환한다', async () => {
+    const { createClient } = await import('@/lib/supabase/server');
+    const { restoreNote } = await import('@/lib/db/notes');
+
+    vi.mocked(createClient).mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: { id: 'user-123' } },
+          error: null,
+        }),
+      },
+    } as any);
+
+    vi.mocked(restoreNote).mockRejectedValue(new Error('Database error'));
+
+    const result = await restoreNoteAction('note-123');
+
+    expect(result).toEqual({
+      error: '노트를 복구하는 중 오류가 발생했습니다.',
+    });
+  });
+});
+
+describe('hardDeleteNoteAction', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('인증되지 않은 사용자는 노트를 영구 삭제할 수 없다', async () => {
+    const { createClient } = await import('@/lib/supabase/server');
+    vi.mocked(createClient).mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: null },
+          error: new Error('Not authenticated'),
+        }),
+      },
+    } as any);
+
+    const result = await hardDeleteNoteAction('note-123');
+
+    expect(result).toEqual({
+      error: '로그인이 필요합니다.',
+    });
+  });
+
+  it('성공적으로 노트를 영구 삭제한다', async () => {
+    const { createClient } = await import('@/lib/supabase/server');
+    const { hardDeleteNote } = await import('@/lib/db/notes');
+
+    vi.mocked(createClient).mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: { id: 'user-123' } },
+          error: null,
+        }),
+      },
+    } as any);
+
+    vi.mocked(hardDeleteNote).mockResolvedValue(true);
+
+    const result = await hardDeleteNoteAction('note-123');
+
+    expect(result).toEqual({ success: true });
+  });
+
+  it('존재하지 않는 노트 영구 삭제 시 에러를 반환한다', async () => {
+    const { createClient } = await import('@/lib/supabase/server');
+    const { hardDeleteNote } = await import('@/lib/db/notes');
+
+    vi.mocked(createClient).mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: { id: 'user-123' } },
+          error: null,
+        }),
+      },
+    } as any);
+
+    vi.mocked(hardDeleteNote).mockResolvedValue(false);
+
+    const result = await hardDeleteNoteAction('nonexistent-id');
+
+    expect(result).toEqual({
+      error: '노트를 찾을 수 없거나 삭제 권한이 없습니다.',
+    });
+  });
+
+  it('데이터베이스 에러 발생 시 에러 메시지를 반환한다', async () => {
+    const { createClient } = await import('@/lib/supabase/server');
+    const { hardDeleteNote } = await import('@/lib/db/notes');
+
+    vi.mocked(createClient).mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: { id: 'user-123' } },
+          error: null,
+        }),
+      },
+    } as any);
+
+    vi.mocked(hardDeleteNote).mockRejectedValue(new Error('Database error'));
+
+    const result = await hardDeleteNoteAction('note-123');
+
+    expect(result).toEqual({
+      error: '노트를 영구 삭제하는 중 오류가 발생했습니다.',
+    });
+  });
+});
+
+describe('getDeletedNotesAction', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('인증되지 않은 사용자는 삭제된 노트를 조회할 수 없다', async () => {
+    const { createClient } = await import('@/lib/supabase/server');
+    vi.mocked(createClient).mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: null },
+          error: new Error('Not authenticated'),
+        }),
+      },
+    } as any);
+
+    const result = await getDeletedNotesAction();
+
+    expect(result).toEqual({
+      notes: [],
+      error: '로그인이 필요합니다.',
+    });
+  });
+
+  it('성공적으로 삭제된 노트 목록을 조회한다', async () => {
+    const { createClient } = await import('@/lib/supabase/server');
+    const { getDeletedNotesByUserId } = await import('@/lib/db/notes');
+
+    vi.mocked(createClient).mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: { id: 'user-123' } },
+          error: null,
+        }),
+      },
+    } as any);
+
+    const deletedNotes = [
+      {
+        id: 'note-1',
+        userId: 'user-123',
+        title: '삭제된 노트 1',
+        content: '내용 1',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        deletedAt: new Date(),
+      },
+      {
+        id: 'note-2',
+        userId: 'user-123',
+        title: '삭제된 노트 2',
+        content: '내용 2',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        deletedAt: new Date(),
+      },
+    ];
+
+    vi.mocked(getDeletedNotesByUserId).mockResolvedValue(deletedNotes);
+
+    const result = await getDeletedNotesAction();
+
+    expect(result).toEqual({ notes: deletedNotes });
+  });
+
+  it('데이터베이스 에러 발생 시 에러 메시지를 반환한다', async () => {
+    const { createClient } = await import('@/lib/supabase/server');
+    const { getDeletedNotesByUserId } = await import('@/lib/db/notes');
+
+    vi.mocked(createClient).mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: { id: 'user-123' } },
+          error: null,
+        }),
+      },
+    } as any);
+
+    vi.mocked(getDeletedNotesByUserId).mockRejectedValue(new Error('Database error'));
+
+    const result = await getDeletedNotesAction();
+
+    expect(result).toEqual({
+      notes: [],
+      error: '삭제된 노트를 불러오는 중 오류가 발생했습니다.',
     });
   });
 });

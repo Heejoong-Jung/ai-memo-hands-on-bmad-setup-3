@@ -27,6 +27,10 @@ const {
   updateNote,
   deleteNote,
   getNotesByUserIdPaginated,
+  softDeleteNote,
+  restoreNote,
+  hardDeleteNote,
+  getDeletedNotesByUserId,
 } = await import('./notes');
 
 describe('Notes CRUD Functions', () => {
@@ -41,6 +45,12 @@ describe('Notes CRUD Functions', () => {
     content: 'Test Content',
     createdAt: new Date('2025-01-01'),
     updatedAt: new Date('2025-01-01'),
+    deletedAt: null,
+  };
+
+  const mockDeletedNote: Note = {
+    ...mockNote,
+    deletedAt: new Date('2025-01-02'),
   };
 
   beforeEach(() => {
@@ -365,6 +375,221 @@ describe('Notes CRUD Functions', () => {
 
       expect(result.notes).toHaveLength(0);
       expect(result.total).toBe(0);
+    });
+  });
+
+  describe('softDeleteNote', () => {
+    it('성공: 노트 소프트 삭제', async () => {
+      mockDb.update.mockReturnValueOnce({
+        set: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            returning: vi.fn().mockResolvedValue([mockDeletedNote]),
+          }),
+        }),
+      });
+
+      const result = await softDeleteNote(mockNoteId, mockUserId);
+
+      expect(result).toEqual(mockDeletedNote);
+      expect(result?.deletedAt).not.toBeNull();
+    });
+
+    it('실패: 존재하지 않는 노트', async () => {
+      mockDb.update.mockReturnValueOnce({
+        set: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            returning: vi.fn().mockResolvedValue([]),
+          }),
+        }),
+      });
+
+      const result = await softDeleteNote('nonexistent-id', mockUserId);
+
+      expect(result).toBeNull();
+    });
+
+    it('권한: 다른 사용자의 노트 삭제 불가', async () => {
+      mockDb.update.mockReturnValueOnce({
+        set: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            returning: vi.fn().mockResolvedValue([]),
+          }),
+        }),
+      });
+
+      const result = await softDeleteNote(mockNoteId, mockOtherUserId);
+
+      expect(result).toBeNull();
+    });
+
+    it('실패: 이미 삭제된 노트 재삭제 불가', async () => {
+      mockDb.update.mockReturnValueOnce({
+        set: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            returning: vi.fn().mockResolvedValue([]),
+          }),
+        }),
+      });
+
+      const result = await softDeleteNote(mockNoteId, mockUserId);
+
+      expect(result).toBeNull();
+    });
+  });
+
+  describe('restoreNote', () => {
+    it('성공: 노트 복구', async () => {
+      mockDb.update.mockReturnValueOnce({
+        set: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            returning: vi.fn().mockResolvedValue([mockNote]),
+          }),
+        }),
+      });
+
+      const result = await restoreNote(mockNoteId, mockUserId);
+
+      expect(result).toEqual(mockNote);
+      expect(result?.deletedAt).toBeNull();
+    });
+
+    it('실패: 존재하지 않는 노트', async () => {
+      mockDb.update.mockReturnValueOnce({
+        set: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            returning: vi.fn().mockResolvedValue([]),
+          }),
+        }),
+      });
+
+      const result = await restoreNote('nonexistent-id', mockUserId);
+
+      expect(result).toBeNull();
+    });
+
+    it('권한: 다른 사용자의 노트 복구 불가', async () => {
+      mockDb.update.mockReturnValueOnce({
+        set: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            returning: vi.fn().mockResolvedValue([]),
+          }),
+        }),
+      });
+
+      const result = await restoreNote(mockNoteId, mockOtherUserId);
+
+      expect(result).toBeNull();
+    });
+
+    it('실패: 삭제되지 않은 노트 복구 불가', async () => {
+      mockDb.update.mockReturnValueOnce({
+        set: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            returning: vi.fn().mockResolvedValue([]),
+          }),
+        }),
+      });
+
+      const result = await restoreNote(mockNoteId, mockUserId);
+
+      expect(result).toBeNull();
+    });
+  });
+
+  describe('hardDeleteNote', () => {
+    it('성공: 노트 영구 삭제', async () => {
+      mockDb.delete.mockReturnValueOnce({
+        where: vi.fn().mockReturnValue({
+          returning: vi.fn().mockResolvedValue([mockDeletedNote]),
+        }),
+      });
+
+      const result = await hardDeleteNote(mockNoteId, mockUserId);
+
+      expect(result).toBe(true);
+    });
+
+    it('실패: 존재하지 않는 노트', async () => {
+      mockDb.delete.mockReturnValueOnce({
+        where: vi.fn().mockReturnValue({
+          returning: vi.fn().mockResolvedValue([]),
+        }),
+      });
+
+      const result = await hardDeleteNote('nonexistent-id', mockUserId);
+
+      expect(result).toBe(false);
+    });
+
+    it('권한: 다른 사용자의 노트 영구 삭제 불가', async () => {
+      mockDb.delete.mockReturnValueOnce({
+        where: vi.fn().mockReturnValue({
+          returning: vi.fn().mockResolvedValue([]),
+        }),
+      });
+
+      const result = await hardDeleteNote(mockNoteId, mockOtherUserId);
+
+      expect(result).toBe(false);
+    });
+
+    it('실패: soft delete되지 않은 노트 영구 삭제 불가', async () => {
+      mockDb.delete.mockReturnValueOnce({
+        where: vi.fn().mockReturnValue({
+          returning: vi.fn().mockResolvedValue([]),
+        }),
+      });
+
+      const result = await hardDeleteNote(mockNoteId, mockUserId);
+
+      expect(result).toBe(false);
+    });
+  });
+
+  describe('getDeletedNotesByUserId', () => {
+    it('성공: 삭제된 노트 목록 조회', async () => {
+      const deletedNotes = [mockDeletedNote, { ...mockDeletedNote, id: 'note-456' }];
+
+      mockDb.select.mockReturnValueOnce({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            orderBy: vi.fn().mockResolvedValue(deletedNotes),
+          }),
+        }),
+      });
+
+      const result = await getDeletedNotesByUserId(mockUserId);
+
+      expect(result).toHaveLength(2);
+      expect(result[0].deletedAt).not.toBeNull();
+    });
+
+    it('빈 목록: 삭제된 노트가 없는 경우', async () => {
+      mockDb.select.mockReturnValueOnce({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            orderBy: vi.fn().mockResolvedValue([]),
+          }),
+        }),
+      });
+
+      const result = await getDeletedNotesByUserId(mockUserId);
+
+      expect(result).toHaveLength(0);
+    });
+
+    it('권한: 다른 사용자의 삭제된 노트는 조회되지 않음', async () => {
+      mockDb.select.mockReturnValueOnce({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            orderBy: vi.fn().mockResolvedValue([]),
+          }),
+        }),
+      });
+
+      const result = await getDeletedNotesByUserId(mockOtherUserId);
+
+      expect(result).toHaveLength(0);
     });
   });
 });

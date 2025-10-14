@@ -5,7 +5,7 @@
 
 import { db } from './client';
 import { notes, type Note, type NewNote } from '@/drizzle/schema';
-import { eq, and, desc, sql, count } from 'drizzle-orm';
+import { eq, and, desc, sql, count, isNull, isNotNull } from 'drizzle-orm';
 
 /**
  * 새로운 노트 생성
@@ -30,7 +30,7 @@ export async function createNote(
 }
 
 /**
- * 사용자의 모든 노트 조회
+ * 사용자의 모든 노트 조회 (삭제된 노트 제외)
  * @param userId - 사용자 ID
  * @returns 노트 배열 (최신순)
  */
@@ -38,7 +38,7 @@ export async function getNotesByUserId(userId: string): Promise<Note[]> {
   return db
     .select()
     .from(notes)
-    .where(eq(notes.userId, userId))
+    .where(and(eq(notes.userId, userId), isNull(notes.deletedAt)))
     .orderBy(notes.createdAt);
 }
 
@@ -90,6 +90,7 @@ export async function updateNote(
 
 /**
  * 노트 삭제 (권한 체크 포함)
+ * @deprecated 이 함수는 하드 삭제를 수행합니다. softDeleteNote 사용을 권장합니다.
  * @param noteId - 노트 ID
  * @param userId - 사용자 ID (권한 확인용)
  * @returns 삭제 성공 여부
@@ -107,7 +108,101 @@ export async function deleteNote(
 }
 
 /**
- * 사용자의 노트 목록 조회 (페이지네이션 지원)
+ * 노트 소프트 삭제 (권한 체크 포함)
+ * deleted_at을 현재 시각으로 설정
+ * @param noteId - 노트 ID
+ * @param userId - 사용자 ID (권한 확인용)
+ * @returns 삭제된 노트 객체 또는 null
+ */
+export async function softDeleteNote(
+  noteId: string,
+  userId: string
+): Promise<Note | null> {
+  const result = await db
+    .update(notes)
+    .set({
+      deletedAt: new Date(),
+    })
+    .where(
+      and(
+        eq(notes.id, noteId),
+        eq(notes.userId, userId),
+        isNull(notes.deletedAt) // 이미 삭제된 노트는 다시 삭제 불가
+      )
+    )
+    .returning();
+
+  return result[0] || null;
+}
+
+/**
+ * 노트 복구 (권한 체크 포함)
+ * deleted_at을 null로 설정
+ * @param noteId - 노트 ID
+ * @param userId - 사용자 ID (권한 확인용)
+ * @returns 복구된 노트 객체 또는 null
+ */
+export async function restoreNote(
+  noteId: string,
+  userId: string
+): Promise<Note | null> {
+  const result = await db
+    .update(notes)
+    .set({
+      deletedAt: null,
+    })
+    .where(
+      and(
+        eq(notes.id, noteId),
+        eq(notes.userId, userId),
+        isNotNull(notes.deletedAt) // 삭제된 노트만 복구 가능
+      )
+    )
+    .returning();
+
+  return result[0] || null;
+}
+
+/**
+ * 노트 영구 삭제 (권한 체크 포함)
+ * DB에서 완전히 제거
+ * @param noteId - 노트 ID
+ * @param userId - 사용자 ID (권한 확인용)
+ * @returns 삭제 성공 여부
+ */
+export async function hardDeleteNote(
+  noteId: string,
+  userId: string
+): Promise<boolean> {
+  const result = await db
+    .delete(notes)
+    .where(
+      and(
+        eq(notes.id, noteId),
+        eq(notes.userId, userId),
+        isNotNull(notes.deletedAt) // 이미 soft delete된 노트만 영구 삭제 가능
+      )
+    )
+    .returning();
+
+  return result.length > 0;
+}
+
+/**
+ * 사용자의 삭제된 노트 목록 조회
+ * @param userId - 사용자 ID
+ * @returns 삭제된 노트 배열 (최근 삭제된 순)
+ */
+export async function getDeletedNotesByUserId(userId: string): Promise<Note[]> {
+  return db
+    .select()
+    .from(notes)
+    .where(and(eq(notes.userId, userId), isNotNull(notes.deletedAt)))
+    .orderBy(desc(notes.deletedAt));
+}
+
+/**
+ * 사용자의 노트 목록 조회 (페이지네이션 지원, 삭제된 노트 제외)
  * @param userId - 사용자 ID
  * @param page - 페이지 번호 (1부터 시작)
  * @param pageSize - 페이지당 항목 수
@@ -121,20 +216,20 @@ export async function getNotesByUserIdPaginated(
   // OFFSET 계산
   const offset = (page - 1) * pageSize;
 
-  // 노트 조회 (최신순, 페이지네이션)
+  // 노트 조회 (최신순, 페이지네이션, 삭제된 노트 제외)
   const notesList = await db
     .select()
     .from(notes)
-    .where(eq(notes.userId, userId))
+    .where(and(eq(notes.userId, userId), isNull(notes.deletedAt)))
     .orderBy(desc(notes.createdAt))
     .limit(pageSize)
     .offset(offset);
 
-  // 전체 노트 개수 조회
+  // 전체 노트 개수 조회 (삭제된 노트 제외)
   const totalResult = await db
     .select({ count: count() })
     .from(notes)
-    .where(eq(notes.userId, userId));
+    .where(and(eq(notes.userId, userId), isNull(notes.deletedAt)));
 
   return {
     notes: notesList,

@@ -1,12 +1,21 @@
 // app/notes/actions.ts
 // 노트 관련 Server Actions
-// 노트 생성, 수정, 삭제 등의 서버 사이드 로직 처리
+// 노트 생성, 조회, 수정, 삭제 등의 서버 사이드 로직 처리
 // 관련 파일: lib/db/notes.ts, lib/supabase/server.ts, app/notes/new/page.tsx
 
 'use server';
 
 import { createClient } from '@/lib/supabase/server';
-import { createNote, getNotesByUserIdPaginated } from '@/lib/db/notes';
+import {
+  createNote,
+  getNotesByUserIdPaginated,
+  getNoteById,
+  updateNote,
+  softDeleteNote,
+  restoreNote,
+  hardDeleteNote,
+  getDeletedNotesByUserId,
+} from '@/lib/db/notes';
 import { redirect } from 'next/navigation';
 import type { Note } from '@/drizzle/schema';
 
@@ -94,6 +103,235 @@ export async function getNotesAction(
       notes: [],
       total: 0,
       error: '노트를 불러오는 중 오류가 발생했습니다.',
+    };
+  }
+}
+
+/**
+ * 특정 노트 조회 Server Action
+ * @param noteId - 노트 ID
+ * @returns 노트 객체 또는 에러 메시지
+ */
+export async function getNoteByIdAction(
+  noteId: string
+): Promise<{ note: Note | null; error?: string }> {
+  const supabase = await createClient();
+
+  // 사용자 인증 확인
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+
+  if (authError || !user) {
+    return { note: null, error: '로그인이 필요합니다.' };
+  }
+
+  try {
+    // 노트 조회 (사용자 스코프 적용)
+    const note = await getNoteById(noteId, user.id);
+
+    if (!note) {
+      return { note: null, error: '노트를 찾을 수 없습니다.' };
+    }
+
+    return { note };
+  } catch (error) {
+    console.error('노트 조회 에러:', error);
+    return { note: null, error: '노트를 불러오는 중 오류가 발생했습니다.' };
+  }
+}
+
+/**
+ * 노트 수정 Server Action
+ * @param noteId - 노트 ID
+ * @param formData - 수정할 데이터 (title, content)
+ * @returns 성공 시 수정된 노트, 실패 시 에러 메시지
+ */
+export async function updateNoteAction(
+  noteId: string,
+  formData: { title: string; content: string }
+): Promise<{ success?: boolean; note?: Note; error?: string }> {
+  const supabase = await createClient();
+
+  // 사용자 인증 확인
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+
+  if (authError || !user) {
+    return { error: '로그인이 필요합니다.' };
+  }
+
+  // 제목 검증
+  if (!formData.title || formData.title.trim() === '') {
+    return { error: '제목을 입력해주세요.' };
+  }
+
+  if (formData.title.length > 200) {
+    return { error: '제목은 최대 200자까지 입력 가능합니다.' };
+  }
+
+  if (formData.content.length > 50000) {
+    return { error: '본문은 최대 50,000자까지 입력 가능합니다.' };
+  }
+
+  try {
+    // 노트 업데이트 (사용자 스코프 적용)
+    const updatedNote = await updateNote(
+      noteId,
+      user.id,
+      formData.title.trim(),
+      formData.content.trim()
+    );
+
+    if (!updatedNote) {
+      return { error: '노트를 찾을 수 없거나 수정 권한이 없습니다.' };
+    }
+
+    return { success: true, note: updatedNote };
+  } catch (error) {
+    console.error('노트 수정 에러:', error);
+    return { error: '노트를 수정하는 중 오류가 발생했습니다.' };
+  }
+}
+
+/**
+ * 노트 소프트 삭제 Server Action
+ * @param noteId - 노트 ID
+ * @returns 성공 또는 에러 메시지
+ */
+export async function softDeleteNoteAction(
+  noteId: string
+): Promise<{ success?: boolean; error?: string }> {
+  const supabase = await createClient();
+
+  // 사용자 인증 확인
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+
+  if (authError || !user) {
+    return { error: '로그인이 필요합니다.' };
+  }
+
+  try {
+    // 노트 소프트 삭제 (사용자 스코프 적용)
+    const deletedNote = await softDeleteNote(noteId, user.id);
+
+    if (!deletedNote) {
+      return { error: '노트를 찾을 수 없거나 삭제 권한이 없습니다.' };
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error('노트 삭제 에러:', error);
+    return { error: '노트를 삭제하는 중 오류가 발생했습니다.' };
+  }
+}
+
+/**
+ * 노트 복구 Server Action
+ * @param noteId - 노트 ID
+ * @returns 성공 또는 에러 메시지
+ */
+export async function restoreNoteAction(
+  noteId: string
+): Promise<{ success?: boolean; error?: string }> {
+  const supabase = await createClient();
+
+  // 사용자 인증 확인
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+
+  if (authError || !user) {
+    return { error: '로그인이 필요합니다.' };
+  }
+
+  try {
+    // 노트 복구 (사용자 스코프 적용)
+    const restoredNote = await restoreNote(noteId, user.id);
+
+    if (!restoredNote) {
+      return { error: '노트를 찾을 수 없거나 복구 권한이 없습니다.' };
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error('노트 복구 에러:', error);
+    return { error: '노트를 복구하는 중 오류가 발생했습니다.' };
+  }
+}
+
+/**
+ * 노트 영구 삭제 Server Action
+ * @param noteId - 노트 ID
+ * @returns 성공 또는 에러 메시지
+ */
+export async function hardDeleteNoteAction(
+  noteId: string
+): Promise<{ success?: boolean; error?: string }> {
+  const supabase = await createClient();
+
+  // 사용자 인증 확인
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+
+  if (authError || !user) {
+    return { error: '로그인이 필요합니다.' };
+  }
+
+  try {
+    // 노트 영구 삭제 (사용자 스코프 적용)
+    const deleted = await hardDeleteNote(noteId, user.id);
+
+    if (!deleted) {
+      return { error: '노트를 찾을 수 없거나 삭제 권한이 없습니다.' };
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error('노트 영구 삭제 에러:', error);
+    return { error: '노트를 영구 삭제하는 중 오류가 발생했습니다.' };
+  }
+}
+
+/**
+ * 삭제된 노트 목록 조회 Server Action
+ * @returns 삭제된 노트 목록 또는 에러 메시지
+ */
+export async function getDeletedNotesAction(): Promise<{
+  notes: Note[];
+  error?: string;
+}> {
+  const supabase = await createClient();
+
+  // 사용자 인증 확인
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+
+  if (authError || !user) {
+    return { notes: [], error: '로그인이 필요합니다.' };
+  }
+
+  try {
+    // 삭제된 노트 목록 조회
+    const notes = await getDeletedNotesByUserId(user.id);
+
+    return { notes };
+  } catch (error) {
+    console.error('삭제된 노트 조회 에러:', error);
+    return {
+      notes: [],
+      error: '삭제된 노트를 불러오는 중 오류가 발생했습니다.',
     };
   }
 }

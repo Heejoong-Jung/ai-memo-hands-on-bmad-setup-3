@@ -47,9 +47,16 @@ export default async function NotesPage(props: { searchParams: SearchParams }) {
             총 {total}개의 노트
           </p>
         </div>
-        <Link href="/notes/new">
-          <Button size="lg">+ 새 노트 작성</Button>
-        </Link>
+        <div className="flex gap-2">
+          <Link href="/notes/trash">
+            <Button variant="outline" size="lg">
+              🗑️ 휴지통
+            </Button>
+          </Link>
+          <Link href="/notes/new">
+            <Button size="lg">+ 새 노트 작성</Button>
+          </Link>
+        </div>
       </div>
 
       {/* 에러 메시지 */}
