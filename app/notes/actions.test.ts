@@ -361,7 +361,7 @@ describe('getNotesAction', () => {
     expect(result).toEqual({
       notes: [],
       total: 0,
-      error: '노트를 불러오는 중 오류가 발생했습니다.',
+      error: '노트를 불러오는 중 오류가 발생했습니다. 데이터베이스 연결을 확인해주세요.',
     });
   });
 });

@@ -49,6 +49,28 @@ DATABASE_URL=postgresql://postgres.your-project-id:[YOUR-PASSWORD]@aws-0-ap-nort
 pnpm test:db
 ```
 
+## Google Gemini API Setup
+
+This project uses Google Gemini API for AI-powered features (summarization, tagging).
+
+### Prerequisites
+
+1. Get your Gemini API key from [Google AI Studio](https://makersuite.google.com/app/apikey)
+2. Add the following to your `.env.local` file:
+
+```env
+# Google Gemini API
+GEMINI_API_KEY=your-gemini-api-key-here
+```
+
+### Connection Test
+
+연결 상태를 확인하려면:
+
+```bash
+pnpm test:gemini
+```
+
 ### Drizzle Commands
 
 ```bash
