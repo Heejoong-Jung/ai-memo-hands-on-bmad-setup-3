@@ -20,6 +20,66 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
+## Database Setup
+
+This project uses [Drizzle ORM](https://orm.drizzle.team/) with Supabase Postgres.
+
+### Prerequisites
+
+1. Set up your Supabase project at [supabase.com](https://supabase.com)
+2. Create a `.env.local` file in the project root with the following variables:
+
+```env
+# Supabase 프로젝트 URL (Project Settings > API > Project URL)
+NEXT_PUBLIC_SUPABASE_URL=https://your-project-id.supabase.co
+
+# Supabase Anon Key (Project Settings > API > Project API keys > anon/public)
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key-here
+
+# Database Connection String (Project Settings > Database > Connection string > Connection pooling)
+# Connection Pooling URL 사용 권장 (포트 6543)
+DATABASE_URL=postgresql://postgres.your-project-id:[YOUR-PASSWORD]@aws-0-ap-northeast-2.pooler.supabase.com:6543/postgres
+```
+
+### Connection Test
+
+연결 상태를 확인하려면:
+
+```bash
+pnpm test:db
+```
+
+### Drizzle Commands
+
+```bash
+# Generate migration files from schema
+pnpm drizzle-kit generate
+
+# Apply migrations to database
+pnpm drizzle-kit push
+
+# Pull schema from database
+pnpm drizzle-kit pull
+
+# Check for migration conflicts
+pnpm drizzle-kit check
+
+# Upgrade migration snapshots
+pnpm drizzle-kit up
+
+# Open Drizzle Studio (database GUI)
+pnpm drizzle-kit studio
+```
+
+## Testing
+
+Run tests with:
+
+```bash
+pnpm test          # Run all tests once
+pnpm test:watch    # Run tests in watch mode
+```
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:
