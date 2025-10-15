@@ -9,6 +9,7 @@ import { createClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import HeroSection from "@/components/landing/hero-section";
+import { signOut } from "@/app/auth/actions";
 
 export default async function Home() {
   const supabase = await createClient();
@@ -29,9 +30,11 @@ export default async function Home() {
               priority
             />
             <div className="flex gap-4">
-              <Button variant="outline" asChild>
-                <Link href="/api/auth/signout">로그아웃</Link>
-              </Button>
+              <form action={signOut}>
+                <Button variant="outline" type="submit">
+                  로그아웃
+                </Button>
+              </form>
             </div>
           </div>
 

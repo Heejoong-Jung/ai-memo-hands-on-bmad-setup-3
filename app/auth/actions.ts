@@ -358,3 +358,35 @@ export async function updatePassword(formData: FormData): Promise<PasswordUpdate
   }
 }
 
+/**
+ * 로그아웃 Server Action
+ */
+export async function signOut(): Promise<void> {
+  try {
+    // Supabase 서버 클라이언트 생성
+    const supabase = await createClient()
+
+    // 로그아웃 시도
+    const { error } = await supabase.auth.signOut()
+
+    // 에러 처리
+    if (error) {
+      console.error('Sign out error:', error)
+      // 에러가 발생해도 로그아웃은 시도하고 메인 페이지로 리다이렉트
+    }
+
+    // 로그아웃 성공 또는 실패와 관계없이 메인 페이지로 리다이렉트
+    redirect('/')
+  } catch (error) {
+    console.error('Unexpected error during sign out:', error)
+    
+    // redirect 에러는 다시 throw (Next.js에서 정상적인 동작)
+    if (error instanceof Error && error.message === 'NEXT_REDIRECT') {
+      throw error
+    }
+    
+    // 예기치 않은 에러가 발생해도 메인 페이지로 리다이렉트
+    redirect('/')
+  }
+}
+
