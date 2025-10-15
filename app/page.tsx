@@ -3,16 +3,13 @@
 // 사용자의 로그인 여부에 따라 Hero 섹션 또는 대시보드 표시
 // 관련 파일: components/landing/hero-section.tsx, lib/supabase/server.ts, app/auth/login/page.tsx, app/auth/signup/page.tsx
 
-import Image from "next/image";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import HeroSection from "@/components/landing/hero-section";
 import FeaturesSection from "@/components/landing/features-section";
 import DashboardMain from "@/components/dashboard/dashboard-main";
 import { getRecentNotesForDashboard, getNotesStatsForDashboard } from "@/lib/db/notes";
-import { signOut } from "@/app/auth/actions";
 
 export default async function Home() {
   const supabase = await createClient();

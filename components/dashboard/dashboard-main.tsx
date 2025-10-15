@@ -8,15 +8,7 @@ import DashboardHeader from "./dashboard-header";
 import QuickActions from "./quick-actions";
 import NotesStats from "./notes-stats";
 import NotesList from "./notes-list";
-
-interface Note {
-  id: string;
-  title: string;
-  content: string;
-  created_at: string;
-  updated_at: string;
-  tags?: string[];
-}
+import type { Note } from "@/drizzle/schema";
 
 interface DashboardMainProps {
   user: User;

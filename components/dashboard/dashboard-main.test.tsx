@@ -34,7 +34,7 @@ vi.mock("./notes-stats", () => ({
 }));
 
 vi.mock("./notes-list", () => ({
-  default: ({ notes, isLoading }: { notes: any[]; isLoading?: boolean }) => (
+  default: ({ notes, isLoading }: { notes: unknown[]; isLoading?: boolean }) => (
     <div data-testid="notes-list">
       <span>Notes List: {notes.length} notes, loading: {isLoading ? 'true' : 'false'}</span>
     </div>

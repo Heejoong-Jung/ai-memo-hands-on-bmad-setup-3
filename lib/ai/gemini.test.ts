@@ -4,10 +4,9 @@
 // 관련 파일: lib/ai/gemini.ts
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import type { GoogleGenAI } from '@google/genai';
 
 // 모듈을 모킹하기 전에 타입을 저장
-type _MockGoogleGenAI = GoogleGenAI;
+// type _MockGoogleGenAI = GoogleGenAI;
 
 // @google/genai 모킹
 vi.mock('@google/genai', () => {
