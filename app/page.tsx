@@ -9,6 +9,7 @@ import { createClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import HeroSection from "@/components/landing/hero-section";
+import FeaturesSection from "@/components/landing/features-section";
 import { signOut } from "@/app/auth/actions";
 
 export default async function Home() {
@@ -104,8 +105,11 @@ export default async function Home() {
         </div>
       </nav>
 
-      {/* Hero 섹션 */}
-      <HeroSection />
-    </div>
-  );
-}
+              {/* Hero 섹션 */}
+              <HeroSection />
+              
+              {/* 기능 소개 섹션 */}
+              <FeaturesSection />
+            </div>
+          );
+        }
