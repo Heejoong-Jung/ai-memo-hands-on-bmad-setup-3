@@ -23,6 +23,8 @@ vi.mock('./client', () => ({
 const {
   createNote,
   getNotesByUserId,
+  getRecentNotesForDashboard,
+  getNotesStatsForDashboard,
   getNoteById,
   updateNote,
   deleteNote,
@@ -104,6 +106,107 @@ describe('Notes CRUD Functions', () => {
 
       expect(result).toEqual([]);
       expect(result).toHaveLength(0);
+    });
+  });
+
+  describe('getRecentNotesForDashboard', () => {
+    it('성공: 최근 메모 5개 조회 (최신순)', async () => {
+      const mockNotes = [
+        { ...mockNote, id: 'note-1', createdAt: new Date('2025-01-03') },
+        { ...mockNote, id: 'note-2', createdAt: new Date('2025-01-02') },
+        { ...mockNote, id: 'note-3', createdAt: new Date('2025-01-01') },
+      ];
+
+      mockDb.select.mockReturnValue({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            orderBy: vi.fn().mockReturnValue({
+              limit: vi.fn().mockResolvedValue(mockNotes),
+            }),
+          }),
+        }),
+      });
+
+      const result = await getRecentNotesForDashboard(mockUserId);
+
+      expect(result).toEqual(mockNotes);
+      expect(result).toHaveLength(3);
+    });
+
+    it('빈 목록: 메모가 없는 경우', async () => {
+      mockDb.select.mockReturnValue({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            orderBy: vi.fn().mockReturnValue({
+              limit: vi.fn().mockResolvedValue([]),
+            }),
+          }),
+        }),
+      });
+
+      const result = await getRecentNotesForDashboard(mockUserId);
+
+      expect(result).toEqual([]);
+    });
+  });
+
+  describe('getNotesStatsForDashboard', () => {
+    it('성공: 메모 통계 조회', async () => {
+      const mockStats = {
+        totalNotes: 5,
+        recentNotes: 2,
+        lastCreatedAt: new Date('2025-01-03')
+      };
+
+      // 총 메모 수
+      mockDb.select.mockReturnValueOnce({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockResolvedValue([{ count: 5 }]),
+        }),
+      });
+
+      // 최근 7일 메모 수
+      mockDb.select.mockReturnValueOnce({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockResolvedValue([{ count: 2 }]),
+        }),
+      });
+
+      // 마지막 생성일
+      mockDb.select.mockReturnValueOnce({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            orderBy: vi.fn().mockReturnValue({
+              limit: vi.fn().mockResolvedValue([{ createdAt: new Date('2025-01-03') }]),
+            }),
+          }),
+        }),
+      });
+
+      const result = await getNotesStatsForDashboard(mockUserId);
+
+      expect(result.totalNotes).toBe(5);
+      expect(result.recentNotes).toBe(2);
+      expect(result.lastCreatedAt).toBeDefined();
+    });
+
+    it('빈 통계: 메모가 없는 경우', async () => {
+      // 모든 쿼리가 빈 결과 반환
+      mockDb.select.mockReturnValue({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            orderBy: vi.fn().mockReturnValue({
+              limit: vi.fn().mockResolvedValue([]),
+            }),
+          }),
+        }),
+      });
+
+      const result = await getNotesStatsForDashboard(mockUserId);
+
+      expect(result.totalNotes).toBe(0);
+      expect(result.recentNotes).toBe(0);
+      expect(result.lastCreatedAt).toBeUndefined();
     });
   });
 

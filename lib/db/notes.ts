@@ -5,7 +5,7 @@
 
 import { db } from './client';
 import { notes, type Note, type NewNote } from '@/drizzle/schema';
-import { eq, and, desc, count, isNull, isNotNull } from 'drizzle-orm';
+import { eq, and, desc, count, isNull, isNotNull, gte } from 'drizzle-orm';
 
 /**
  * 새로운 노트 생성
@@ -40,6 +40,62 @@ export async function getNotesByUserId(userId: string): Promise<Note[]> {
     .from(notes)
     .where(and(eq(notes.userId, userId), isNull(notes.deletedAt)))
     .orderBy(notes.createdAt);
+}
+
+/**
+ * 대시보드용 최근 메모 조회 (최대 5개)
+ * @param userId - 사용자 ID
+ * @returns 최근 메모 배열 (최신순)
+ */
+export async function getRecentNotesForDashboard(userId: string): Promise<Note[]> {
+  return db
+    .select()
+    .from(notes)
+    .where(and(eq(notes.userId, userId), isNull(notes.deletedAt)))
+    .orderBy(desc(notes.createdAt))
+    .limit(5);
+}
+
+/**
+ * 대시보드용 메모 통계 조회
+ * @param userId - 사용자 ID
+ * @returns 메모 통계 객체
+ */
+export async function getNotesStatsForDashboard(userId: string) {
+  const sevenDaysAgo = new Date();
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+  const [totalResult, recentResult, lastCreatedResult] = await Promise.all([
+    // 총 메모 수
+    db
+      .select({ count: count() })
+      .from(notes)
+      .where(and(eq(notes.userId, userId), isNull(notes.deletedAt))),
+    
+    // 최근 7일 메모 수
+    db
+      .select({ count: count() })
+      .from(notes)
+      .where(and(
+        eq(notes.userId, userId), 
+        isNull(notes.deletedAt),
+        gte(notes.createdAt, sevenDaysAgo)
+      )),
+    
+    // 마지막 생성일
+    db
+      .select({ createdAt: notes.createdAt })
+      .from(notes)
+      .where(and(eq(notes.userId, userId), isNull(notes.deletedAt)))
+      .orderBy(desc(notes.createdAt))
+      .limit(1)
+  ]);
+
+  return {
+    totalNotes: totalResult[0]?.count || 0,
+    recentNotes: recentResult[0]?.count || 0,
+    lastCreatedAt: lastCreatedResult[0]?.createdAt?.toISOString()
+  };
 }
 
 /**
