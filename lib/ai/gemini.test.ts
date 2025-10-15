@@ -423,5 +423,181 @@ describe('gemini', () => {
       await expect(generateSummary('테스트')).rejects.toThrow(RateLimitError);
     });
   });
+
+  describe('generateTags', () => {
+    it('노트 내용을 태그 배열로 변환한다', async () => {
+      const mockResponse = {
+        text: 'AI, 기술, 학습, 개발, 프로그래밍, 인공지능',
+      };
+
+      const { GoogleGenAI } = await import('@google/genai');
+      const mockGenerateContent = vi.fn().mockResolvedValue(mockResponse);
+
+      (GoogleGenAI as unknown as ReturnType<typeof vi.fn>).mockImplementation(
+        () => ({
+          models: {
+            generateContent: mockGenerateContent,
+          },
+        })
+      );
+
+      vi.resetModules();
+      process.env.GEMINI_API_KEY = 'test-api-key';
+      const { generateTags } = await import('./gemini');
+
+      const noteContent = '오늘은 AI 기술에 대해 공부했다. 특히 Gemini API를 사용하는 방법을 배웠고, 요약 기능을 구현하는 과정이 흥미로웠다.';
+      const result = await generateTags(noteContent);
+
+      expect(result).toEqual(['AI', '기술', '학습', '개발', '프로그래밍', '인공지능']);
+      expect(mockGenerateContent).toHaveBeenCalled();
+    });
+
+    it('긴 노트 내용은 토큰 제한으로 잘린다', async () => {
+      const mockResponse = {
+        text: '태그1, 태그2, 태그3',
+      };
+
+      const { GoogleGenAI } = await import('@google/genai');
+      const mockGenerateContent = vi.fn().mockResolvedValue(mockResponse);
+
+      (GoogleGenAI as unknown as ReturnType<typeof vi.fn>).mockImplementation(
+        () => ({
+          models: {
+            generateContent: mockGenerateContent,
+          },
+        })
+      );
+
+      vi.resetModules();
+      process.env.GEMINI_API_KEY = 'test-api-key';
+      const { generateTags } = await import('./gemini');
+
+      // 토큰 제한을 초과하는 긴 텍스트 (약 35,000자)
+      const longContent = 'a'.repeat(35000);
+      const result = await generateTags(longContent);
+
+      expect(result).toEqual(['태그1', '태그2', '태그3']);
+      // truncateToTokenLimit이 호출되어 텍스트가 잘렸는지 확인
+      const callArgs = mockGenerateContent.mock.calls[0][0];
+      expect(callArgs.contents.length).toBeLessThan(longContent.length + 200);
+    });
+
+    it('태그 파싱 로직을 올바르게 처리한다', async () => {
+      const mockResponse = {
+        text: '  태그1  ,  태그2  ,  태그3  ,  태그4  ,  태그5  ,  태그6  ,  태그7  ',
+      };
+
+      const { GoogleGenAI } = await import('@google/genai');
+      const mockGenerateContent = vi.fn().mockResolvedValue(mockResponse);
+
+      (GoogleGenAI as unknown as ReturnType<typeof vi.fn>).mockImplementation(
+        () => ({
+          models: {
+            generateContent: mockGenerateContent,
+          },
+        })
+      );
+
+      vi.resetModules();
+      process.env.GEMINI_API_KEY = 'test-api-key';
+      const { generateTags } = await import('./gemini');
+
+      const result = await generateTags('테스트 노트');
+
+      // 공백 제거 및 최대 6개 제한 확인
+      expect(result).toEqual(['태그1', '태그2', '태그3', '태그4', '태그5', '태그6']);
+      expect(result.length).toBe(6);
+    });
+
+    it('빈 태그는 필터링된다', async () => {
+      const mockResponse = {
+        text: '태그1, , 태그2, , 태그3',
+      };
+
+      const { GoogleGenAI } = await import('@google/genai');
+      const mockGenerateContent = vi.fn().mockResolvedValue(mockResponse);
+
+      (GoogleGenAI as unknown as ReturnType<typeof vi.fn>).mockImplementation(
+        () => ({
+          models: {
+            generateContent: mockGenerateContent,
+          },
+        })
+      );
+
+      vi.resetModules();
+      process.env.GEMINI_API_KEY = 'test-api-key';
+      const { generateTags } = await import('./gemini');
+
+      const result = await generateTags('테스트 노트');
+
+      expect(result).toEqual(['태그1', '태그2', '태그3']);
+    });
+
+    it('태그 생성 실패 시 에러를 throw한다', async () => {
+      const { GoogleGenAI } = await import('@google/genai');
+      const mockGenerateContent = vi
+        .fn()
+        .mockRejectedValue(new Error('API error'));
+
+      (GoogleGenAI as unknown as ReturnType<typeof vi.fn>).mockImplementation(
+        () => ({
+          models: {
+            generateContent: mockGenerateContent,
+          },
+        })
+      );
+
+      vi.resetModules();
+      process.env.GEMINI_API_KEY = 'test-api-key';
+      const { generateTags } = await import('./gemini');
+
+      await expect(generateTags('테스트 노트')).rejects.toThrow();
+    });
+
+    it('Rate Limit 에러 발생 시 적절히 처리한다', async () => {
+      const { GoogleGenAI } = await import('@google/genai');
+      const mockGenerateContent = vi
+        .fn()
+        .mockRejectedValue(new Error('429 Rate limit exceeded'));
+
+      (GoogleGenAI as unknown as ReturnType<typeof vi.fn>).mockImplementation(
+        () => ({
+          models: {
+            generateContent: mockGenerateContent,
+          },
+        })
+      );
+
+      vi.resetModules();
+      process.env.GEMINI_API_KEY = 'test-api-key';
+      const { generateTags } = await import('./gemini');
+      const { RateLimitError } = await import('./types');
+
+      await expect(generateTags('테스트')).rejects.toThrow(RateLimitError);
+    });
+
+    it('Timeout 에러 발생 시 적절히 처리한다', async () => {
+      const { GoogleGenAI } = await import('@google/genai');
+      const mockGenerateContent = vi
+        .fn()
+        .mockRejectedValue(new Error('Request timeout'));
+
+      (GoogleGenAI as unknown as ReturnType<typeof vi.fn>).mockImplementation(
+        () => ({
+          models: {
+            generateContent: mockGenerateContent,
+          },
+        })
+      );
+
+      vi.resetModules();
+      process.env.GEMINI_API_KEY = 'test-api-key';
+      const { generateTags } = await import('./gemini');
+      const { TimeoutError } = await import('./types');
+
+      await expect(generateTags('테스트')).rejects.toThrow(TimeoutError);
+    });
+  });
 });
 

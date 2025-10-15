@@ -14,6 +14,7 @@ import {
   hardDeleteNoteAction,
   getDeletedNotesAction,
   generateSummaryAction,
+  generateTagsAction,
 } from './actions';
 
 // 모킹 설정
@@ -40,6 +41,12 @@ vi.mock('@/lib/db/summaries', () => ({
 
 vi.mock('@/lib/ai/gemini', () => ({
   generateSummary: vi.fn(),
+  generateTags: vi.fn(),
+}));
+
+vi.mock('@/lib/db/note-tags', () => ({
+  createNoteTags: vi.fn(),
+  deleteTagsByNoteId: vi.fn(),
 }));
 
 vi.mock('next/navigation', () => ({
@@ -1284,6 +1291,254 @@ describe('generateSummaryAction', () => {
 
     expect(result).toEqual({
       error: 'AI 요약 생성 중 오류가 발생했습니다.',
+    });
+  });
+});
+
+describe('generateTagsAction', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('인증되지 않은 사용자는 태그를 생성할 수 없다', async () => {
+    const { createClient } = await import('@/lib/supabase/server');
+    vi.mocked(createClient).mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: null },
+          error: new Error('Not authenticated'),
+        }),
+      },
+    } as any);
+
+    const result = await generateTagsAction('note-id');
+
+    expect(result).toEqual({ error: '로그인이 필요합니다.' });
+  });
+
+  it('존재하지 않는 노트는 태그를 생성할 수 없다', async () => {
+    const { createClient } = await import('@/lib/supabase/server');
+    vi.mocked(createClient).mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: { id: 'user-123' } },
+          error: null,
+        }),
+      },
+    } as any);
+
+    const { getNoteById } = await import('@/lib/db/notes');
+    vi.mocked(getNoteById).mockResolvedValue(null);
+
+    const result = await generateTagsAction('non-existent-note');
+
+    expect(result).toEqual({
+      error: '노트를 찾을 수 없거나 권한이 없습니다.',
+    });
+  });
+
+  it('태그를 성공적으로 생성한다', async () => {
+    const { createClient } = await import('@/lib/supabase/server');
+    vi.mocked(createClient).mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: { id: 'user-123' } },
+          error: null,
+        }),
+      },
+    } as any);
+
+    const mockNote = {
+      id: 'note-123',
+      userId: 'user-123',
+      title: '테스트 노트',
+      content: '오늘 AI 기술에 대해 공부했다.',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      deletedAt: null,
+    };
+
+    const { getNoteById } = await import('@/lib/db/notes');
+    vi.mocked(getNoteById).mockResolvedValue(mockNote);
+
+    const { deleteTagsByNoteId } = await import('@/lib/db/note-tags');
+    vi.mocked(deleteTagsByNoteId).mockResolvedValue(true);
+
+    const { generateTags } = await import('@/lib/ai/gemini');
+    vi.mocked(generateTags).mockResolvedValue(['AI', '기술', '학습', '개발']);
+
+    const { createNoteTags } = await import('@/lib/db/note-tags');
+    vi.mocked(createNoteTags).mockResolvedValue([
+      { id: 'tag-1', noteId: 'note-123', tag: 'AI' },
+      { id: 'tag-2', noteId: 'note-123', tag: '기술' },
+      { id: 'tag-3', noteId: 'note-123', tag: '학습' },
+      { id: 'tag-4', noteId: 'note-123', tag: '개발' },
+    ]);
+
+    const result = await generateTagsAction('note-123');
+
+    expect(result).toEqual({
+      success: true,
+      tags: ['AI', '기술', '학습', '개발'],
+    });
+    expect(deleteTagsByNoteId).toHaveBeenCalledWith('note-123', 'user-123');
+    expect(generateTags).toHaveBeenCalledWith('오늘 AI 기술에 대해 공부했다.');
+    expect(createNoteTags).toHaveBeenCalledWith('note-123', ['AI', '기술', '학습', '개발']);
+  });
+
+  it('빈 태그 배열인 경우 DB에 저장하지 않는다', async () => {
+    const { createClient } = await import('@/lib/supabase/server');
+    vi.mocked(createClient).mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: { id: 'user-123' } },
+          error: null,
+        }),
+      },
+    } as any);
+
+    const mockNote = {
+      id: 'note-123',
+      userId: 'user-123',
+      title: '테스트 노트',
+      content: '빈 내용',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      deletedAt: null,
+    };
+
+    const { getNoteById } = await import('@/lib/db/notes');
+    vi.mocked(getNoteById).mockResolvedValue(mockNote);
+
+    const { deleteTagsByNoteId } = await import('@/lib/db/note-tags');
+    vi.mocked(deleteTagsByNoteId).mockResolvedValue(true);
+
+    const { generateTags } = await import('@/lib/ai/gemini');
+    vi.mocked(generateTags).mockResolvedValue([]);
+
+    const { createNoteTags } = await import('@/lib/db/note-tags');
+
+    const result = await generateTagsAction('note-123');
+
+    expect(result).toEqual({
+      success: true,
+      tags: [],
+    });
+    expect(deleteTagsByNoteId).toHaveBeenCalledWith('note-123', 'user-123');
+    expect(generateTags).toHaveBeenCalledWith('빈 내용');
+    expect(createNoteTags).not.toHaveBeenCalled();
+  });
+
+  it('Rate Limit 에러 발생 시 적절한 메시지를 반환한다', async () => {
+    const { createClient } = await import('@/lib/supabase/server');
+    vi.mocked(createClient).mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: { id: 'user-123' } },
+          error: null,
+        }),
+      },
+    } as any);
+
+    const mockNote = {
+      id: 'note-123',
+      userId: 'user-123',
+      title: '테스트 노트',
+      content: '테스트 내용',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      deletedAt: null,
+    };
+
+    const { getNoteById } = await import('@/lib/db/notes');
+    vi.mocked(getNoteById).mockResolvedValue(mockNote);
+
+    const { deleteTagsByNoteId } = await import('@/lib/db/note-tags');
+    vi.mocked(deleteTagsByNoteId).mockResolvedValue(true);
+
+    const { RateLimitError } = await import('@/lib/ai/types');
+    const { generateTags } = await import('@/lib/ai/gemini');
+    vi.mocked(generateTags).mockRejectedValue(new RateLimitError());
+
+    const result = await generateTagsAction('note-123');
+
+    expect(result).toEqual({
+      error: 'API 요청 한도를 초과했습니다. 잠시 후 다시 시도해주세요.',
+    });
+  });
+
+  it('Timeout 에러 발생 시 적절한 메시지를 반환한다', async () => {
+    const { createClient } = await import('@/lib/supabase/server');
+    vi.mocked(createClient).mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: { id: 'user-123' } },
+          error: null,
+        }),
+      },
+    } as any);
+
+    const mockNote = {
+      id: 'note-123',
+      userId: 'user-123',
+      title: '테스트 노트',
+      content: '테스트 내용',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      deletedAt: null,
+    };
+
+    const { getNoteById } = await import('@/lib/db/notes');
+    vi.mocked(getNoteById).mockResolvedValue(mockNote);
+
+    const { deleteTagsByNoteId } = await import('@/lib/db/note-tags');
+    vi.mocked(deleteTagsByNoteId).mockResolvedValue(true);
+
+    const { TimeoutError } = await import('@/lib/ai/types');
+    const { generateTags } = await import('@/lib/ai/gemini');
+    vi.mocked(generateTags).mockRejectedValue(new TimeoutError());
+
+    const result = await generateTagsAction('note-123');
+
+    expect(result).toEqual({
+      error: '요청 시간이 초과되었습니다. 다시 시도해주세요.',
+    });
+  });
+
+  it('일반 에러 발생 시 기본 에러 메시지를 반환한다', async () => {
+    const { createClient } = await import('@/lib/supabase/server');
+    vi.mocked(createClient).mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: { id: 'user-123' } },
+          error: null,
+        }),
+      },
+    } as any);
+
+    const mockNote = {
+      id: 'note-123',
+      userId: 'user-123',
+      title: '테스트 노트',
+      content: '테스트 내용',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      deletedAt: null,
+    };
+
+    const { getNoteById } = await import('@/lib/db/notes');
+    vi.mocked(getNoteById).mockResolvedValue(mockNote);
+
+    const { deleteTagsByNoteId } = await import('@/lib/db/note-tags');
+    vi.mocked(deleteTagsByNoteId).mockResolvedValue(true);
+
+    const { generateTags } = await import('@/lib/ai/gemini');
+    vi.mocked(generateTags).mockRejectedValue(new Error('Unknown error'));
+
+    const result = await generateTagsAction('note-123');
+
+    expect(result).toEqual({
+      error: 'AI 태그 생성 중 오류가 발생했습니다.',
     });
   });
 });

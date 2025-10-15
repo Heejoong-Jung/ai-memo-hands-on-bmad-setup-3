@@ -186,3 +186,37 @@ ${truncatedContent}
   }
 }
 
+/**
+ * 노트 내용을 기반으로 태그 생성
+ * @param noteContent - 노트 내용
+ * @returns 최대 6개의 태그 배열
+ */
+export async function generateTags(noteContent: string): Promise<string[]> {
+  // 토큰 제한 체크 및 자르기
+  const truncatedContent = truncateToTokenLimit(noteContent);
+
+  // 태그 생성 프롬프트
+  const prompt = `다음 노트의 내용을 분석하여 최대 6개의 관련성 높은 태그를 생성해주세요. 태그는 한국어 또는 영어로 작성할 수 있으며, 노트의 핵심 주제와 키워드를 반영해야 합니다.
+
+노트 내용:
+${truncatedContent}
+
+태그 (쉼표로 구분하여 최대 6개):`;
+
+  try {
+    const response = await generateText(prompt, 'gemini-2.0-flash');
+    
+    // 응답을 파싱하여 태그 배열로 변환
+    const tags = response
+      .split(',')
+      .map(tag => tag.trim())
+      .filter(tag => tag.length > 0)
+      .slice(0, 6); // 최대 6개로 제한
+
+    return tags;
+  } catch (error) {
+    console.error('태그 생성 실패:', error);
+    throw handleGeminiError(error);
+  }
+}
+

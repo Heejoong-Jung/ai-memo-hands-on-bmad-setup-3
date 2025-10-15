@@ -9,6 +9,7 @@ import NoteDetailPage from './page';
 import { redirect, notFound } from 'next/navigation';
 import * as notesDb from '@/lib/db/notes';
 import * as summariesDb from '@/lib/db/summaries';
+import * as noteTagsDb from '@/lib/db/note-tags';
 
 // Mock modules
 vi.mock('next/navigation', () => ({
@@ -34,6 +35,10 @@ vi.mock('@/lib/db/notes', () => ({
 
 vi.mock('@/lib/db/summaries', () => ({
   getSummaryByNoteId: vi.fn(),
+}));
+
+vi.mock('@/lib/db/note-tags', () => ({
+  getTagsByNoteId: vi.fn(),
 }));
 
 // Mock Next.js Link component
@@ -112,6 +117,7 @@ describe('NoteDetailPage', () => {
 
     vi.mocked(notesDb.getNoteById).mockResolvedValue(mockNote);
     vi.mocked(summariesDb.getSummaryByNoteId).mockResolvedValue(null);
+    vi.mocked(noteTagsDb.getTagsByNoteId).mockResolvedValue([]);
 
     const params = Promise.resolve({ id: 'note-123' });
     const component = await NoteDetailPage({ params });
@@ -144,6 +150,7 @@ describe('NoteDetailPage', () => {
 
     vi.mocked(notesDb.getNoteById).mockResolvedValue(mockNote);
     vi.mocked(summariesDb.getSummaryByNoteId).mockResolvedValue(null);
+    vi.mocked(noteTagsDb.getTagsByNoteId).mockResolvedValue([]);
 
     const params = Promise.resolve({ id: 'note-123' });
     const component = await NoteDetailPage({ params });
@@ -166,6 +173,7 @@ describe('NoteDetailPage', () => {
 
     vi.mocked(notesDb.getNoteById).mockResolvedValue(mockNote);
     vi.mocked(summariesDb.getSummaryByNoteId).mockResolvedValue(null);
+    vi.mocked(noteTagsDb.getTagsByNoteId).mockResolvedValue([]);
 
     const params = Promise.resolve({ id: 'note-123' });
     const component = await NoteDetailPage({ params });
@@ -194,6 +202,7 @@ describe('NoteDetailPage', () => {
 
     vi.mocked(notesDb.getNoteById).mockResolvedValue(mockNote);
     vi.mocked(summariesDb.getSummaryByNoteId).mockResolvedValue(null);
+    vi.mocked(noteTagsDb.getTagsByNoteId).mockResolvedValue([]);
 
     const params = Promise.resolve({ id: 'note-123' });
     const component = await NoteDetailPage({ params });
@@ -228,6 +237,110 @@ describe('NoteDetailPage', () => {
       'user-123'
     );
     expect(notFound).toHaveBeenCalled();
+  });
+
+  it('태그가 있을 때 태그가 올바르게 표시된다', async () => {
+    const { createClient } = await import('@/lib/supabase/server');
+    
+    vi.mocked(createClient).mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: mockUser },
+          error: null,
+        }),
+      },
+    } as any);
+
+    vi.mocked(notesDb.getNoteById).mockResolvedValue(mockNote);
+    vi.mocked(summariesDb.getSummaryByNoteId).mockResolvedValue(null);
+    vi.mocked(noteTagsDb.getTagsByNoteId).mockResolvedValue(['AI', '기술', '학습']);
+
+    const params = Promise.resolve({ id: 'note-123' });
+    const component = await NoteDetailPage({ params });
+    render(component);
+
+    // 태그 섹션 제목 확인
+    expect(screen.getByText('태그')).toBeDefined();
+    
+    // 태그들 확인
+    expect(screen.getByText('#AI')).toBeDefined();
+    expect(screen.getByText('#기술')).toBeDefined();
+    expect(screen.getByText('#학습')).toBeDefined();
+  });
+
+  it('태그가 없을 때 안내 메시지가 표시된다', async () => {
+    const { createClient } = await import('@/lib/supabase/server');
+    
+    vi.mocked(createClient).mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: mockUser },
+          error: null,
+        }),
+      },
+    } as any);
+
+    vi.mocked(notesDb.getNoteById).mockResolvedValue(mockNote);
+    vi.mocked(summariesDb.getSummaryByNoteId).mockResolvedValue(null);
+    vi.mocked(noteTagsDb.getTagsByNoteId).mockResolvedValue([]);
+
+    const params = Promise.resolve({ id: 'note-123' });
+    const component = await NoteDetailPage({ params });
+    render(component);
+
+    // 태그 섹션 제목 확인
+    expect(screen.getByText('태그')).toBeDefined();
+    
+    // 안내 메시지 확인
+    expect(screen.getByText(/AI가 노트의 핵심 주제를 분석하여/)).toBeDefined();
+  });
+
+  it('AI 태그 생성 버튼이 렌더링된다', async () => {
+    const { createClient } = await import('@/lib/supabase/server');
+    
+    vi.mocked(createClient).mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: mockUser },
+          error: null,
+        }),
+      },
+    } as any);
+
+    vi.mocked(notesDb.getNoteById).mockResolvedValue(mockNote);
+    vi.mocked(summariesDb.getSummaryByNoteId).mockResolvedValue(null);
+    vi.mocked(noteTagsDb.getTagsByNoteId).mockResolvedValue([]);
+
+    const params = Promise.resolve({ id: 'note-123' });
+    const component = await NoteDetailPage({ params });
+    render(component);
+
+    // AI 태그 생성 버튼 확인
+    expect(screen.getByText('AI 태그 생성')).toBeDefined();
+  });
+
+  it('태그가 있을 때 태그 재생성 버튼이 렌더링된다', async () => {
+    const { createClient } = await import('@/lib/supabase/server');
+    
+    vi.mocked(createClient).mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: mockUser },
+          error: null,
+        }),
+      },
+    } as any);
+
+    vi.mocked(notesDb.getNoteById).mockResolvedValue(mockNote);
+    vi.mocked(summariesDb.getSummaryByNoteId).mockResolvedValue(null);
+    vi.mocked(noteTagsDb.getTagsByNoteId).mockResolvedValue(['AI', '기술']);
+
+    const params = Promise.resolve({ id: 'note-123' });
+    const component = await NoteDetailPage({ params });
+    render(component);
+
+    // 태그 재생성 버튼 확인
+    expect(screen.getByText('태그 재생성')).toBeDefined();
   });
 });
 

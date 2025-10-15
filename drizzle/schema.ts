@@ -47,3 +47,22 @@ export const summaries = pgTable(
 export type Summary = typeof summaries.$inferSelect;
 export type NewSummary = typeof summaries.$inferInsert;
 
+export const noteTags = pgTable(
+  'note_tags',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    noteId: uuid('note_id')
+      .notNull()
+      .references(() => notes.id, { onDelete: 'cascade' }),
+    tag: text('tag').notNull(),
+  },
+  (table) => ({
+    noteIdIdx: index('note_tags_note_id_idx').on(table.noteId),
+    tagIdx: index('note_tags_tag_idx').on(table.tag),
+  })
+);
+
+// TypeScript 타입 추론
+export type NoteTag = typeof noteTags.$inferSelect;
+export type NewNoteTag = typeof noteTags.$inferInsert;
+
