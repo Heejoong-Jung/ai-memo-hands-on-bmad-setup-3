@@ -24,7 +24,7 @@ vi.mock("framer-motion", () => ({
 
 // FeatureCard 컴포넌트 모킹
 vi.mock("./feature-card", () => ({
-  default: ({ feature, index }: { feature: any; index: number }) => (
+  default: ({ feature, index }: { feature: { title: string; description: string }; index: number }) => (
     <div data-testid={`feature-card-${index}`}>
       <h3>{feature.title}</h3>
       <p>{feature.description}</p>
