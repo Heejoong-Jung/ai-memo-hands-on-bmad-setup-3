@@ -57,10 +57,10 @@ describe("Home Page", () => {
     render(component);
 
     expect(screen.getByText("AI 메모장")).toBeInTheDocument();
-    expect(screen.getByText("✅ 로그인 상태")).toBeInTheDocument();
+    expect(screen.getByText(/안녕하세요, test님!/)).toBeInTheDocument();
     expect(screen.getByText("test@example.com")).toBeInTheDocument();
-    expect(screen.getByText("📝 내 메모 보기")).toBeInTheDocument();
-    expect(screen.getByText("✏️ 새 메모 작성")).toBeInTheDocument();
+    expect(screen.getByText("새 메모 작성")).toBeInTheDocument();
+    expect(screen.getByText("음성 메모")).toBeInTheDocument();
   });
 
   it("로그인되지 않은 사용자에게 랜딩 페이지를 표시한다", async () => {
@@ -122,10 +122,10 @@ describe("Home Page", () => {
     const component = await Home();
     render(component);
 
-    const notesLink = screen.getByText("📝 내 메모 보기").closest("a");
-    const newNoteLink = screen.getByText("✏️ 새 메모 작성").closest("a");
+    const newNoteLink = screen.getByText("새 메모 작성").closest("a");
+    const voiceNoteLink = screen.getByText("음성 메모").closest("a");
 
-    expect(notesLink).toHaveAttribute("href", "/notes");
     expect(newNoteLink).toHaveAttribute("href", "/notes/new");
+    expect(voiceNoteLink).toHaveAttribute("href", "/notes/new?mode=voice");
   });
 });
