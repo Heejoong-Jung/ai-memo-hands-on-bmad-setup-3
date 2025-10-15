@@ -6,8 +6,7 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { createSummary, getSummaryByNoteId, deleteSummaryByNoteId } from './summaries';
 import { db } from './client';
-import { summaries, notes } from '@/drizzle/schema';
-import { eq, and, desc } from 'drizzle-orm';
+import { summaries } from '@/drizzle/schema';
 
 // Drizzle ORM 모킹
 vi.mock('./client', () => ({
@@ -42,7 +41,7 @@ describe('Summaries CRUD Functions', () => {
         values: vi.fn().mockReturnThis(),
         returning: vi.fn().mockResolvedValue([mockSummary]),
       };
-      (db.insert as any).mockReturnValue(mockInsert);
+      (db.insert as unknown as ReturnType<typeof vi.fn>).mockReturnValue(mockInsert);
 
       // Act
       const result = await createSummary('note-id', 'gemini-2.0-flash', '- 포인트 1\n- 포인트 2\n- 포인트 3');
@@ -71,7 +70,7 @@ describe('Summaries CRUD Functions', () => {
         values: vi.fn().mockReturnThis(),
         returning: vi.fn().mockResolvedValue([mockSummary]),
       };
-      (db.insert as any).mockReturnValue(mockInsert);
+      (db.insert as unknown as ReturnType<typeof vi.fn>).mockReturnValue(mockInsert);
 
       // Act
       const result = await createSummary('note-id', 'gemini-2.0-flash', '- 요약 내용');
@@ -103,7 +102,7 @@ describe('Summaries CRUD Functions', () => {
         orderBy: vi.fn().mockReturnThis(),
         limit: vi.fn().mockResolvedValue([mockSummary]),
       };
-      (db.select as any).mockReturnValue(mockSelect);
+      (db.select as unknown as ReturnType<typeof vi.fn>).mockReturnValue(mockSelect);
 
       // Act
       const result = await getSummaryByNoteId('note-id', 'user-id');
@@ -127,7 +126,7 @@ describe('Summaries CRUD Functions', () => {
         orderBy: vi.fn().mockReturnThis(),
         limit: vi.fn().mockResolvedValue([]),
       };
-      (db.select as any).mockReturnValue(mockSelect);
+      (db.select as unknown as ReturnType<typeof vi.fn>).mockReturnValue(mockSelect);
 
       // Act
       const result = await getSummaryByNoteId('note-id', 'user-id');
@@ -145,7 +144,7 @@ describe('Summaries CRUD Functions', () => {
         orderBy: vi.fn().mockReturnThis(),
         limit: vi.fn().mockResolvedValue([]),
       };
-      (db.select as any).mockReturnValue(mockSelect);
+      (db.select as unknown as ReturnType<typeof vi.fn>).mockReturnValue(mockSelect);
 
       // Act
       const result = await getSummaryByNoteId('note-id', 'wrong-user-id');
@@ -173,13 +172,13 @@ describe('Summaries CRUD Functions', () => {
         where: vi.fn().mockReturnThis(),
         limit: vi.fn().mockResolvedValue([mockNote]),
       };
-      (db.select as any).mockReturnValue(mockSelectNote);
+      (db.select as unknown as ReturnType<typeof vi.fn>).mockReturnValue(mockSelectNote);
 
       const mockDelete = {
         where: vi.fn().mockReturnThis(),
         returning: vi.fn().mockResolvedValue([{ id: 'summary-id' }]),
       };
-      (db.delete as any).mockReturnValue(mockDelete);
+      (db.delete as unknown as ReturnType<typeof vi.fn>).mockReturnValue(mockDelete);
 
       // Act
       const result = await deleteSummaryByNoteId('note-id', 'user-id');
@@ -198,7 +197,7 @@ describe('Summaries CRUD Functions', () => {
         where: vi.fn().mockReturnThis(),
         limit: vi.fn().mockResolvedValue([]), // 노트를 찾을 수 없음
       };
-      (db.select as any).mockReturnValue(mockSelectNote);
+      (db.select as unknown as ReturnType<typeof vi.fn>).mockReturnValue(mockSelectNote);
 
       // Act
       const result = await deleteSummaryByNoteId('note-id', 'wrong-user-id');
@@ -225,13 +224,13 @@ describe('Summaries CRUD Functions', () => {
         where: vi.fn().mockReturnThis(),
         limit: vi.fn().mockResolvedValue([mockNote]),
       };
-      (db.select as any).mockReturnValue(mockSelectNote);
+      (db.select as unknown as ReturnType<typeof vi.fn>).mockReturnValue(mockSelectNote);
 
       const mockDelete = {
         where: vi.fn().mockReturnThis(),
         returning: vi.fn().mockResolvedValue([]), // 삭제할 요약 없음
       };
-      (db.delete as any).mockReturnValue(mockDelete);
+      (db.delete as unknown as ReturnType<typeof vi.fn>).mockReturnValue(mockDelete);
 
       // Act
       const result = await deleteSummaryByNoteId('note-id', 'user-id');

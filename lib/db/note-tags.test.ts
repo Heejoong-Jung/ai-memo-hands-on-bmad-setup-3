@@ -6,7 +6,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { createNoteTags, getTagsByNoteId, deleteTagsByNoteId } from './note-tags';
 import { db } from './client';
-import { noteTags, notes } from '@/drizzle/schema';
+import { noteTags } from '@/drizzle/schema';
 
 // Drizzle ORM 모킹
 vi.mock('./client', () => ({
@@ -42,7 +42,7 @@ describe('Note Tags CRUD Functions', () => {
         values: vi.fn().mockReturnThis(),
         returning: vi.fn().mockResolvedValue(mockReturnedTags),
       };
-      (db.insert as any).mockReturnValue(mockInsert);
+      (db.insert as unknown as ReturnType<typeof vi.fn>).mockReturnValue(mockInsert);
 
       const result = await createNoteTags(mockNoteId, mockTags);
 
@@ -68,7 +68,7 @@ describe('Note Tags CRUD Functions', () => {
         values: vi.fn().mockReturnThis(),
         returning: vi.fn().mockResolvedValue(mockReturnedTags),
       };
-      (db.insert as any).mockReturnValue(mockInsert);
+      (db.insert as unknown as ReturnType<typeof vi.fn>).mockReturnValue(mockInsert);
 
       const result = await createNoteTags(mockNoteId, tagsWithWhitespace);
 
@@ -94,7 +94,7 @@ describe('Note Tags CRUD Functions', () => {
         innerJoin: vi.fn().mockReturnThis(),
         where: vi.fn().mockResolvedValue(mockResult),
       };
-      (db.select as any).mockReturnValue(mockSelect);
+      (db.select as unknown as ReturnType<typeof vi.fn>).mockReturnValue(mockSelect);
 
       const result = await getTagsByNoteId(mockNoteId, mockUserId);
 
@@ -113,7 +113,7 @@ describe('Note Tags CRUD Functions', () => {
         innerJoin: vi.fn().mockReturnThis(),
         where: vi.fn().mockResolvedValue([]),
       };
-      (db.select as any).mockReturnValue(mockSelect);
+      (db.select as unknown as ReturnType<typeof vi.fn>).mockReturnValue(mockSelect);
 
       const result = await getTagsByNoteId(mockNoteId, 'unauthorized-user');
 
@@ -135,14 +135,14 @@ describe('Note Tags CRUD Functions', () => {
         where: vi.fn().mockReturnThis(),
         limit: vi.fn().mockResolvedValue(mockNote),
       };
-      (db.select as any).mockReturnValue(mockSelectNote);
+      (db.select as unknown as ReturnType<typeof vi.fn>).mockReturnValue(mockSelectNote);
 
       // 태그 삭제 모킹
       const mockDelete = {
         where: vi.fn().mockReturnThis(),
         returning: vi.fn().mockResolvedValue(mockDeletedTags),
       };
-      (db.delete as any).mockReturnValue(mockDelete);
+      (db.delete as unknown as ReturnType<typeof vi.fn>).mockReturnValue(mockDelete);
 
       const result = await deleteTagsByNoteId(mockNoteId, mockUserId);
 
@@ -158,7 +158,7 @@ describe('Note Tags CRUD Functions', () => {
         where: vi.fn().mockReturnThis(),
         limit: vi.fn().mockResolvedValue([]), // 권한 없는 사용자
       };
-      (db.select as any).mockReturnValue(mockSelectNote);
+      (db.select as unknown as ReturnType<typeof vi.fn>).mockReturnValue(mockSelectNote);
 
       const result = await deleteTagsByNoteId(mockNoteId, 'unauthorized-user');
 
@@ -175,13 +175,13 @@ describe('Note Tags CRUD Functions', () => {
         where: vi.fn().mockReturnThis(),
         limit: vi.fn().mockResolvedValue(mockNote),
       };
-      (db.select as any).mockReturnValue(mockSelectNote);
+      (db.select as unknown as ReturnType<typeof vi.fn>).mockReturnValue(mockSelectNote);
 
       const mockDelete = {
         where: vi.fn().mockReturnThis(),
         returning: vi.fn().mockResolvedValue([]), // 삭제할 태그 없음
       };
-      (db.delete as any).mockReturnValue(mockDelete);
+      (db.delete as unknown as ReturnType<typeof vi.fn>).mockReturnValue(mockDelete);
 
       const result = await deleteTagsByNoteId(mockNoteId, mockUserId);
 

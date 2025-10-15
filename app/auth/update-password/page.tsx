@@ -5,8 +5,8 @@
 
 'use client'
 
-import { useState, useEffect } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -20,8 +20,7 @@ import { updatePassword } from '../actions'
  * 비밀번호 재설정 이메일 링크를 통해 접근
  */
 export default function UpdatePasswordPage() {
-  const router = useRouter()
-  const searchParams = useSearchParams()
+  const _router = useRouter()
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [passwordError, setPasswordError] = useState<string>('')

@@ -34,7 +34,7 @@ export function TestGeminiForm() {
       } else {
         setError(result.error || '오류가 발생했습니다.');
       }
-    } catch (err) {
+    } catch (_err) {
       setError('요청 중 오류가 발생했습니다.');
     } finally {
       setIsLoading(false);

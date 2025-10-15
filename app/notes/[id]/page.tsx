@@ -133,7 +133,7 @@ export default async function NoteDetailPage(props: { params: Params }) {
           ) : (
             <p className="text-muted-foreground">
               AI가 노트의 핵심 내용을 3-6개의 불릿 포인트로 요약해드립니다.
-              위의 "AI 요약 생성" 버튼을 클릭하세요.
+              위의 &ldquo;AI 요약 생성&rdquo; 버튼을 클릭하세요.
             </p>
           )}
         </CardContent>

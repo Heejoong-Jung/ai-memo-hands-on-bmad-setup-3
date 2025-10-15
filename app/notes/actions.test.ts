@@ -71,7 +71,7 @@ describe('createNoteAction', () => {
           error: new Error('Not authenticated'),
         }),
       },
-    } as any);
+    } as unknown as ReturnType<typeof import('@/lib/supabase/server').createClient>);
 
     const formData = new FormData();
     formData.append('title', '테스트 제목');
@@ -91,7 +91,7 @@ describe('createNoteAction', () => {
           error: null,
         }),
       },
-    } as any);
+    } as unknown as ReturnType<typeof import('@/lib/supabase/server').createClient>);
 
     const formData = new FormData();
     formData.append('title', '   '); // 빈 공백
@@ -111,7 +111,7 @@ describe('createNoteAction', () => {
           error: null,
         }),
       },
-    } as any);
+    } as unknown as ReturnType<typeof import('@/lib/supabase/server').createClient>);
 
     const formData = new FormData();
     formData.append('title', '테스트 제목');
@@ -131,7 +131,7 @@ describe('createNoteAction', () => {
           error: null,
         }),
       },
-    } as any);
+    } as unknown as ReturnType<typeof import('@/lib/supabase/server').createClient>);
 
     const longTitle = 'a'.repeat(201);
     const formData = new FormData();
@@ -152,7 +152,7 @@ describe('createNoteAction', () => {
           error: null,
         }),
       },
-    } as any);
+    } as unknown as ReturnType<typeof import('@/lib/supabase/server').createClient>);
 
     const longContent = 'a'.repeat(50001);
     const formData = new FormData();
@@ -176,7 +176,7 @@ describe('createNoteAction', () => {
           error: null,
         }),
       },
-    } as any);
+    } as unknown as ReturnType<typeof import('@/lib/supabase/server').createClient>);
 
     vi.mocked(createNote).mockResolvedValue({
       id: 'note-123',
@@ -193,7 +193,7 @@ describe('createNoteAction', () => {
 
     try {
       await createNoteAction(formData);
-    } catch (error) {
+    } catch (_error) {
       // redirect()는 NEXT_REDIRECT 에러를 던지므로 예상된 동작
     }
 
@@ -212,7 +212,7 @@ describe('createNoteAction', () => {
           error: null,
         }),
       },
-    } as any);
+    } as unknown as ReturnType<typeof import('@/lib/supabase/server').createClient>);
 
     vi.mocked(createNote).mockRejectedValue(new Error('Database error'));
 
@@ -240,7 +240,7 @@ describe('getNotesAction', () => {
           error: new Error('Not authenticated'),
         }),
       },
-    } as any);
+    } as unknown as ReturnType<typeof import('@/lib/supabase/server').createClient>);
 
     const result = await getNotesAction(1, 20);
 
@@ -281,7 +281,7 @@ describe('getNotesAction', () => {
           error: null,
         }),
       },
-    } as any);
+    } as unknown as ReturnType<typeof import('@/lib/supabase/server').createClient>);
 
     vi.mocked(getNotesByUserIdPaginated).mockResolvedValue({
       notes: mockNotes,
@@ -308,7 +308,7 @@ describe('getNotesAction', () => {
           error: null,
         }),
       },
-    } as any);
+    } as unknown as ReturnType<typeof import('@/lib/supabase/server').createClient>);
 
     vi.mocked(getNotesByUserIdPaginated).mockResolvedValue({
       notes: [],
@@ -345,7 +345,7 @@ describe('getNotesAction', () => {
           error: null,
         }),
       },
-    } as any);
+    } as unknown as ReturnType<typeof import('@/lib/supabase/server').createClient>);
 
     vi.mocked(getNotesByUserIdPaginated).mockResolvedValue({
       notes: mockNotes,
@@ -372,7 +372,7 @@ describe('getNotesAction', () => {
           error: null,
         }),
       },
-    } as any);
+    } as unknown as ReturnType<typeof import('@/lib/supabase/server').createClient>);
 
     vi.mocked(getNotesByUserIdPaginated).mockRejectedValue(
       new Error('Database error')
@@ -402,7 +402,7 @@ describe('getNoteByIdAction', () => {
           error: new Error('Not authenticated'),
         }),
       },
-    } as any);
+    } as unknown as ReturnType<typeof import('@/lib/supabase/server').createClient>);
 
     const result = await getNoteByIdAction('note-123');
 
@@ -432,7 +432,7 @@ describe('getNoteByIdAction', () => {
           error: null,
         }),
       },
-    } as any);
+    } as unknown as ReturnType<typeof import('@/lib/supabase/server').createClient>);
 
     vi.mocked(getNoteById).mockResolvedValue(mockNote);
 
@@ -453,7 +453,7 @@ describe('getNoteByIdAction', () => {
           error: null,
         }),
       },
-    } as any);
+    } as unknown as ReturnType<typeof import('@/lib/supabase/server').createClient>);
 
     vi.mocked(getNoteById).mockResolvedValue(null);
 
@@ -476,7 +476,7 @@ describe('getNoteByIdAction', () => {
           error: null,
         }),
       },
-    } as any);
+    } as unknown as ReturnType<typeof import('@/lib/supabase/server').createClient>);
 
     // 다른 사용자의 노트이므로 null 반환
     vi.mocked(getNoteById).mockResolvedValue(null);
@@ -500,7 +500,7 @@ describe('getNoteByIdAction', () => {
           error: null,
         }),
       },
-    } as any);
+    } as unknown as ReturnType<typeof import('@/lib/supabase/server').createClient>);
 
     vi.mocked(getNoteById).mockRejectedValue(new Error('Database error'));
 
@@ -527,7 +527,7 @@ describe('updateNoteAction', () => {
           error: new Error('Not authenticated'),
         }),
       },
-    } as any);
+    } as unknown as ReturnType<typeof import('@/lib/supabase/server').createClient>);
 
     const result = await updateNoteAction('note-123', {
       title: '수정된 제목',
@@ -546,7 +546,7 @@ describe('updateNoteAction', () => {
           error: null,
         }),
       },
-    } as any);
+    } as unknown as ReturnType<typeof import('@/lib/supabase/server').createClient>);
 
     const result = await updateNoteAction('note-123', {
       title: '   ',
@@ -565,7 +565,7 @@ describe('updateNoteAction', () => {
           error: null,
         }),
       },
-    } as any);
+    } as unknown as ReturnType<typeof import('@/lib/supabase/server').createClient>);
 
     const longTitle = 'a'.repeat(201);
     const result = await updateNoteAction('note-123', {
@@ -585,7 +585,7 @@ describe('updateNoteAction', () => {
           error: null,
         }),
       },
-    } as any);
+    } as unknown as ReturnType<typeof import('@/lib/supabase/server').createClient>);
 
     const longContent = 'a'.repeat(50001);
     const result = await updateNoteAction('note-123', {
@@ -616,7 +616,7 @@ describe('updateNoteAction', () => {
           error: null,
         }),
       },
-    } as any);
+    } as unknown as ReturnType<typeof import('@/lib/supabase/server').createClient>);
 
     vi.mocked(updateNote).mockResolvedValue(mockUpdatedNote);
 
@@ -648,7 +648,7 @@ describe('updateNoteAction', () => {
           error: null,
         }),
       },
-    } as any);
+    } as unknown as ReturnType<typeof import('@/lib/supabase/server').createClient>);
 
     vi.mocked(updateNote).mockResolvedValue(null);
 
@@ -673,7 +673,7 @@ describe('updateNoteAction', () => {
           error: null,
         }),
       },
-    } as any);
+    } as unknown as ReturnType<typeof import('@/lib/supabase/server').createClient>);
 
     // 다른 사용자의 노트이므로 null 반환
     vi.mocked(updateNote).mockResolvedValue(null);
@@ -699,7 +699,7 @@ describe('updateNoteAction', () => {
           error: null,
         }),
       },
-    } as any);
+    } as unknown as ReturnType<typeof import('@/lib/supabase/server').createClient>);
 
     vi.mocked(updateNote).mockRejectedValue(new Error('Database error'));
 
@@ -728,7 +728,7 @@ describe('softDeleteNoteAction', () => {
           error: new Error('Not authenticated'),
         }),
       },
-    } as any);
+    } as unknown as ReturnType<typeof import('@/lib/supabase/server').createClient>);
 
     const result = await softDeleteNoteAction('note-123');
 
@@ -748,7 +748,7 @@ describe('softDeleteNoteAction', () => {
           error: null,
         }),
       },
-    } as any);
+    } as unknown as ReturnType<typeof import('@/lib/supabase/server').createClient>);
 
     vi.mocked(softDeleteNote).mockResolvedValue({
       id: 'note-123',
@@ -776,7 +776,7 @@ describe('softDeleteNoteAction', () => {
           error: null,
         }),
       },
-    } as any);
+    } as unknown as ReturnType<typeof import('@/lib/supabase/server').createClient>);
 
     vi.mocked(softDeleteNote).mockResolvedValue(null);
 
@@ -798,7 +798,7 @@ describe('softDeleteNoteAction', () => {
           error: null,
         }),
       },
-    } as any);
+    } as unknown as ReturnType<typeof import('@/lib/supabase/server').createClient>);
 
     vi.mocked(softDeleteNote).mockRejectedValue(new Error('Database error'));
 
@@ -824,7 +824,7 @@ describe('restoreNoteAction', () => {
           error: new Error('Not authenticated'),
         }),
       },
-    } as any);
+    } as unknown as ReturnType<typeof import('@/lib/supabase/server').createClient>);
 
     const result = await restoreNoteAction('note-123');
 
@@ -844,7 +844,7 @@ describe('restoreNoteAction', () => {
           error: null,
         }),
       },
-    } as any);
+    } as unknown as ReturnType<typeof import('@/lib/supabase/server').createClient>);
 
     vi.mocked(restoreNote).mockResolvedValue({
       id: 'note-123',
@@ -872,7 +872,7 @@ describe('restoreNoteAction', () => {
           error: null,
         }),
       },
-    } as any);
+    } as unknown as ReturnType<typeof import('@/lib/supabase/server').createClient>);
 
     vi.mocked(restoreNote).mockResolvedValue(null);
 
@@ -894,7 +894,7 @@ describe('restoreNoteAction', () => {
           error: null,
         }),
       },
-    } as any);
+    } as unknown as ReturnType<typeof import('@/lib/supabase/server').createClient>);
 
     vi.mocked(restoreNote).mockRejectedValue(new Error('Database error'));
 
@@ -920,7 +920,7 @@ describe('hardDeleteNoteAction', () => {
           error: new Error('Not authenticated'),
         }),
       },
-    } as any);
+    } as unknown as ReturnType<typeof import('@/lib/supabase/server').createClient>);
 
     const result = await hardDeleteNoteAction('note-123');
 
@@ -940,7 +940,7 @@ describe('hardDeleteNoteAction', () => {
           error: null,
         }),
       },
-    } as any);
+    } as unknown as ReturnType<typeof import('@/lib/supabase/server').createClient>);
 
     vi.mocked(hardDeleteNote).mockResolvedValue(true);
 
@@ -960,7 +960,7 @@ describe('hardDeleteNoteAction', () => {
           error: null,
         }),
       },
-    } as any);
+    } as unknown as ReturnType<typeof import('@/lib/supabase/server').createClient>);
 
     vi.mocked(hardDeleteNote).mockResolvedValue(false);
 
@@ -982,7 +982,7 @@ describe('hardDeleteNoteAction', () => {
           error: null,
         }),
       },
-    } as any);
+    } as unknown as ReturnType<typeof import('@/lib/supabase/server').createClient>);
 
     vi.mocked(hardDeleteNote).mockRejectedValue(new Error('Database error'));
 
@@ -1008,7 +1008,7 @@ describe('getDeletedNotesAction', () => {
           error: new Error('Not authenticated'),
         }),
       },
-    } as any);
+    } as unknown as ReturnType<typeof import('@/lib/supabase/server').createClient>);
 
     const result = await getDeletedNotesAction();
 
@@ -1029,7 +1029,7 @@ describe('getDeletedNotesAction', () => {
           error: null,
         }),
       },
-    } as any);
+    } as unknown as ReturnType<typeof import('@/lib/supabase/server').createClient>);
 
     const deletedNotes = [
       {
@@ -1070,7 +1070,7 @@ describe('getDeletedNotesAction', () => {
           error: null,
         }),
       },
-    } as any);
+    } as unknown as ReturnType<typeof import('@/lib/supabase/server').createClient>);
 
     vi.mocked(getDeletedNotesByUserId).mockRejectedValue(new Error('Database error'));
 
@@ -1097,7 +1097,7 @@ describe('generateSummaryAction', () => {
           error: new Error('Not authenticated'),
         }),
       },
-    } as any);
+    } as unknown as ReturnType<typeof import('@/lib/supabase/server').createClient>);
 
     const result = await generateSummaryAction('note-id');
 
@@ -1113,7 +1113,7 @@ describe('generateSummaryAction', () => {
           error: null,
         }),
       },
-    } as any);
+    } as unknown as ReturnType<typeof import('@/lib/supabase/server').createClient>);
 
     const { getNoteById } = await import('@/lib/db/notes');
     vi.mocked(getNoteById).mockResolvedValue(null);
@@ -1134,7 +1134,7 @@ describe('generateSummaryAction', () => {
           error: null,
         }),
       },
-    } as any);
+    } as unknown as ReturnType<typeof import('@/lib/supabase/server').createClient>);
 
     const mockNote = {
       id: 'note-123',
@@ -1190,7 +1190,7 @@ describe('generateSummaryAction', () => {
           error: null,
         }),
       },
-    } as any);
+    } as unknown as ReturnType<typeof import('@/lib/supabase/server').createClient>);
 
     const mockNote = {
       id: 'note-123',
@@ -1228,7 +1228,7 @@ describe('generateSummaryAction', () => {
           error: null,
         }),
       },
-    } as any);
+    } as unknown as ReturnType<typeof import('@/lib/supabase/server').createClient>);
 
     const mockNote = {
       id: 'note-123',
@@ -1266,7 +1266,7 @@ describe('generateSummaryAction', () => {
           error: null,
         }),
       },
-    } as any);
+    } as unknown as ReturnType<typeof import('@/lib/supabase/server').createClient>);
 
     const mockNote = {
       id: 'note-123',
@@ -1309,7 +1309,7 @@ describe('generateTagsAction', () => {
           error: new Error('Not authenticated'),
         }),
       },
-    } as any);
+    } as unknown as ReturnType<typeof import('@/lib/supabase/server').createClient>);
 
     const result = await generateTagsAction('note-id');
 
@@ -1325,7 +1325,7 @@ describe('generateTagsAction', () => {
           error: null,
         }),
       },
-    } as any);
+    } as unknown as ReturnType<typeof import('@/lib/supabase/server').createClient>);
 
     const { getNoteById } = await import('@/lib/db/notes');
     vi.mocked(getNoteById).mockResolvedValue(null);
@@ -1346,7 +1346,7 @@ describe('generateTagsAction', () => {
           error: null,
         }),
       },
-    } as any);
+    } as unknown as ReturnType<typeof import('@/lib/supabase/server').createClient>);
 
     const mockNote = {
       id: 'note-123',
@@ -1395,7 +1395,7 @@ describe('generateTagsAction', () => {
           error: null,
         }),
       },
-    } as any);
+    } as unknown as ReturnType<typeof import('@/lib/supabase/server').createClient>);
 
     const mockNote = {
       id: 'note-123',
@@ -1438,7 +1438,7 @@ describe('generateTagsAction', () => {
           error: null,
         }),
       },
-    } as any);
+    } as unknown as ReturnType<typeof import('@/lib/supabase/server').createClient>);
 
     const mockNote = {
       id: 'note-123',
@@ -1476,7 +1476,7 @@ describe('generateTagsAction', () => {
           error: null,
         }),
       },
-    } as any);
+    } as unknown as ReturnType<typeof import('@/lib/supabase/server').createClient>);
 
     const mockNote = {
       id: 'note-123',
@@ -1514,7 +1514,7 @@ describe('generateTagsAction', () => {
           error: null,
         }),
       },
-    } as any);
+    } as unknown as ReturnType<typeof import('@/lib/supabase/server').createClient>);
 
     const mockNote = {
       id: 'note-123',
