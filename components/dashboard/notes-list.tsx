@@ -6,16 +6,8 @@
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { FileText, Calendar, Tag, Eye } from "lucide-react";
-
-interface Note {
-  id: string;
-  title: string;
-  content: string;
-  created_at: string;
-  updated_at: string;
-  tags?: string[];
-}
+import { FileText, Calendar, Eye } from "lucide-react";
+import type { Note } from "@/drizzle/schema";
 
 interface NotesListProps {
   notes: Note[];
@@ -23,8 +15,8 @@ interface NotesListProps {
 }
 
 export default function NotesList({ notes, isLoading = false }: NotesListProps) {
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('ko-KR', {
+  const formatDate = (date: Date) => {
+    return date.toLocaleDateString('ko-KR', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -112,18 +104,20 @@ export default function NotesList({ notes, isLoading = false }: NotesListProps) 
                 <div className="flex items-center space-x-4 text-xs text-gray-500 dark:text-gray-400">
                   <div className="flex items-center space-x-1">
                     <Calendar className="w-3 h-3" aria-hidden="true" />
-                    <span aria-label={`작성일: ${formatDate(note.created_at)}`}>{formatDate(note.created_at)}</span>
+                    <span aria-label={`작성일: ${formatDate(note.createdAt)}`}>{formatDate(note.createdAt)}</span>
                   </div>
                   
-                  {note.tags && note.tags.length > 0 && (
+                  {/* TODO: 태그 기능 구현 후 활성화 */}
+                  {/* {note.tags && note.tags.length > 0 && (
                     <div className="flex items-center space-x-1">
                       <Tag className="w-3 h-3" aria-hidden="true" />
                       <span aria-label={`태그 ${note.tags.length}개`}>{note.tags.length}개 태그</span>
                     </div>
-                  )}
+                  )} */}
                 </div>
 
-                {note.tags && note.tags.length > 0 && (
+                {/* TODO: 태그 기능 구현 후 활성화 */}
+                {/* {note.tags && note.tags.length > 0 && (
                   <div className="flex flex-wrap gap-1 mt-2">
                     {note.tags.slice(0, 3).map((tag, index) => (
                       <span
@@ -139,7 +133,7 @@ export default function NotesList({ notes, isLoading = false }: NotesListProps) 
                       </span>
                     )}
                   </div>
-                )}
+                )} */}
               </div>
 
               <div className="ml-4 flex-shrink-0">

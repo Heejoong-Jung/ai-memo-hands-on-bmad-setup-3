@@ -152,7 +152,7 @@ describe('Notes CRUD Functions', () => {
 
   describe('getNotesStatsForDashboard', () => {
     it('성공: 메모 통계 조회', async () => {
-      const mockStats = {
+      const _mockStats = {
         totalNotes: 5,
         recentNotes: 2,
         lastCreatedAt: new Date('2025-01-03')

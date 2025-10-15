@@ -12,7 +12,7 @@ describe("Features Data", () => {
   });
 
   it("모든 기능이 올바른 구조를 가진다", () => {
-    features.forEach((feature, index) => {
+    features.forEach((feature) => {
       expect(feature).toHaveProperty("id");
       expect(feature).toHaveProperty("title");
       expect(feature).toHaveProperty("description");
