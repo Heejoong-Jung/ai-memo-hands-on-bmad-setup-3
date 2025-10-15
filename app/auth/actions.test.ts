@@ -4,7 +4,7 @@
 // 관련 파일: app/auth/actions.ts, lib/supabase/server.ts, lib/validations/auth.ts
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { signIn, requestPasswordReset, updatePassword } from './actions'
+import { signIn, requestPasswordReset, updatePassword, signOut } from './actions'
 import { createClient } from '@/lib/supabase/server'
 
 // Supabase 클라이언트 모킹
@@ -458,6 +458,55 @@ describe('updatePassword Server Action', () => {
       
       expect(result.success).toBe(false)
       expect(result.error).toBe('비밀번호 변경 중 오류가 발생했습니다. 다시 시도해주세요')
+    })
+  })
+})
+
+describe('signOut Server Action', () => {
+  let mockSupabase: ReturnType<typeof import('@/lib/supabase/server').createClient>
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    
+    // Supabase 클라이언트 모킹 설정
+    mockSupabase = {
+      auth: {
+        signOut: vi.fn(),
+      },
+    }
+    
+    vi.mocked(createClient).mockResolvedValue(mockSupabase as unknown as ReturnType<typeof import('@/lib/supabase/server').createClient>)
+  })
+
+  describe('로그아웃 성공', () => {
+    it('로그아웃이 성공적으로 처리되고 리다이렉트된다', async () => {
+      mockSupabase.auth.signOut.mockResolvedValue({
+        error: null,
+      })
+
+      await expect(signOut()).rejects.toThrow('NEXT_REDIRECT')
+      
+      expect(mockSupabase.auth.signOut).toHaveBeenCalledTimes(1)
+    })
+  })
+
+  describe('로그아웃 실패', () => {
+    it('Supabase 에러 발생 시에도 리다이렉트된다', async () => {
+      mockSupabase.auth.signOut.mockResolvedValue({
+        error: { message: 'Sign out failed' },
+      })
+
+      await expect(signOut()).rejects.toThrow('NEXT_REDIRECT')
+      
+      expect(mockSupabase.auth.signOut).toHaveBeenCalledTimes(1)
+    })
+
+    it('예기치 않은 에러 발생 시에도 리다이렉트된다', async () => {
+      mockSupabase.auth.signOut.mockRejectedValue(
+        new Error('Network error')
+      )
+
+      await expect(signOut()).rejects.toThrow('NEXT_REDIRECT')
     })
   })
 })
