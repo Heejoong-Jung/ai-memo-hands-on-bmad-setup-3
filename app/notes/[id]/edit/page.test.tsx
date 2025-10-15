@@ -30,7 +30,7 @@ vi.mock('@/lib/db/notes', () => ({
 
 // Mock EditNoteForm component
 vi.mock('./form', () => ({
-  default: ({ noteId, initialTitle, initialContent }: any) => (
+  default: ({ noteId, initialTitle, initialContent }: { noteId: string; initialTitle: string; initialContent: string }) => (
     <div data-testid="edit-form">
       <input data-testid="note-id" value={noteId} readOnly />
       <input data-testid="initial-title" value={initialTitle} readOnly />
@@ -64,7 +64,7 @@ describe('EditNotePage', () => {
           error: null,
         }),
       },
-    } as any);
+    } as unknown as ReturnType<typeof import('@/lib/supabase/server').createClient>);
 
     const params = Promise.resolve({ id: 'note-123' });
 
@@ -83,7 +83,7 @@ describe('EditNotePage', () => {
           error: null,
         }),
       },
-    } as any);
+    } as unknown as ReturnType<typeof import('@/lib/supabase/server').createClient>);
 
     vi.mocked(notesDb.getNoteById).mockResolvedValue(null);
 
@@ -104,7 +104,7 @@ describe('EditNotePage', () => {
           error: null,
         }),
       },
-    } as any);
+    } as unknown as ReturnType<typeof import('@/lib/supabase/server').createClient>);
 
     vi.mocked(notesDb.getNoteById).mockResolvedValue(mockNote);
 
@@ -132,7 +132,7 @@ describe('EditNotePage', () => {
           error: null,
         }),
       },
-    } as any);
+    } as unknown as ReturnType<typeof import('@/lib/supabase/server').createClient>);
 
     // getNoteById가 null을 반환 (권한 없음)
     vi.mocked(notesDb.getNoteById).mockResolvedValue(null);
@@ -155,7 +155,7 @@ describe('EditNotePage', () => {
           error: null,
         }),
       },
-    } as any);
+    } as unknown as ReturnType<typeof import('@/lib/supabase/server').createClient>);
 
     vi.mocked(notesDb.getNoteById).mockResolvedValue(mockNote);
 

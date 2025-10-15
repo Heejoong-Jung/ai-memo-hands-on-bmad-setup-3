@@ -61,7 +61,7 @@ export function HardDeleteButton({
               ⚠️ 경고: 이 작업은 되돌릴 수 없습니다!
             </p>
             <p>
-              <span className="font-medium">"{title}"</span> 노트를 영구적으로
+              <span className="font-medium">&ldquo;{title}&rdquo;</span> 노트를 영구적으로
               삭제하시겠습니까?
             </p>
             <p className="text-sm">

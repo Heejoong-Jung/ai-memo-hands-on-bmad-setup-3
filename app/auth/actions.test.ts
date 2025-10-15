@@ -14,13 +14,13 @@ vi.mock('@/lib/supabase/server', () => ({
 
 // Next.js redirect 모킹
 vi.mock('next/navigation', () => ({
-  redirect: vi.fn((url: string) => {
+  redirect: vi.fn((_url: string) => {
     throw new Error('NEXT_REDIRECT')
   }),
 }))
 
 describe('signIn Server Action', () => {
-  let mockSupabase: any
+  let mockSupabase: ReturnType<typeof import('@/lib/supabase/server').createClient>
 
   beforeEach(() => {
     vi.clearAllMocks()
@@ -32,7 +32,7 @@ describe('signIn Server Action', () => {
       },
     }
     
-    vi.mocked(createClient).mockResolvedValue(mockSupabase)
+    vi.mocked(createClient).mockResolvedValue(mockSupabase as unknown as ReturnType<typeof import('@/lib/supabase/server').createClient>)
   })
 
   describe('유효성 검증', () => {
@@ -201,7 +201,7 @@ describe('signIn Server Action', () => {
 })
 
 describe('requestPasswordReset Server Action', () => {
-  let mockSupabase: any
+  let mockSupabase: ReturnType<typeof import('@/lib/supabase/server').createClient>
 
   beforeEach(() => {
     vi.clearAllMocks()
@@ -213,7 +213,7 @@ describe('requestPasswordReset Server Action', () => {
       },
     }
     
-    vi.mocked(createClient).mockResolvedValue(mockSupabase)
+    vi.mocked(createClient).mockResolvedValue(mockSupabase as unknown as ReturnType<typeof import('@/lib/supabase/server').createClient>)
   })
 
   describe('유효성 검증', () => {
@@ -294,7 +294,7 @@ describe('requestPasswordReset Server Action', () => {
 })
 
 describe('updatePassword Server Action', () => {
-  let mockSupabase: any
+  let mockSupabase: ReturnType<typeof import('@/lib/supabase/server').createClient>
 
   beforeEach(() => {
     vi.clearAllMocks()
@@ -306,7 +306,7 @@ describe('updatePassword Server Action', () => {
       },
     }
     
-    vi.mocked(createClient).mockResolvedValue(mockSupabase)
+    vi.mocked(createClient).mockResolvedValue(mockSupabase as unknown as ReturnType<typeof import('@/lib/supabase/server').createClient>)
   })
 
   describe('유효성 검증', () => {

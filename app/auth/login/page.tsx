@@ -20,7 +20,7 @@ import { validateEmail } from '@/lib/validations/auth'
  * 이메일/비밀번호 기반 인증
  */
 export default function LoginPage() {
-  const router = useRouter()
+  const _router = useRouter()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [emailError, setEmailError] = useState<string>('')

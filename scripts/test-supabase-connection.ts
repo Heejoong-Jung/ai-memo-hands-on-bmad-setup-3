@@ -89,8 +89,8 @@ async function testSupabaseConnection() {
     }
 
     await sql.end();
-  } catch (error: any) {
-    console.log(`  ❌ Database 연결 실패: ${error.message}`);
+  } catch (error: unknown) {
+    console.log(`  ❌ Database 연결 실패: ${error instanceof Error ? error.message : String(error)}`);
   }
 
   console.log('\n✅ 테스트 완료!\n');

@@ -5,7 +5,7 @@
 
 import { db } from './client';
 import { notes, type Note, type NewNote } from '@/drizzle/schema';
-import { eq, and, desc, sql, count, isNull, isNotNull } from 'drizzle-orm';
+import { eq, and, desc, count, isNull, isNotNull } from 'drizzle-orm';
 
 /**
  * 새로운 노트 생성

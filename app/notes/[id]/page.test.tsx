@@ -73,7 +73,7 @@ describe('NoteDetailPage', () => {
           error: null,
         }),
       },
-    } as any);
+    } as unknown as ReturnType<typeof import('@/lib/supabase/server').createClient>);
 
     const params = Promise.resolve({ id: 'note-123' });
     
@@ -92,7 +92,7 @@ describe('NoteDetailPage', () => {
           error: null,
         }),
       },
-    } as any);
+    } as unknown as ReturnType<typeof import('@/lib/supabase/server').createClient>);
 
     vi.mocked(notesDb.getNoteById).mockResolvedValue(null);
 
@@ -113,7 +113,7 @@ describe('NoteDetailPage', () => {
           error: null,
         }),
       },
-    } as any);
+    } as unknown as ReturnType<typeof import('@/lib/supabase/server').createClient>);
 
     vi.mocked(notesDb.getNoteById).mockResolvedValue(mockNote);
     vi.mocked(summariesDb.getSummaryByNoteId).mockResolvedValue(null);
@@ -146,7 +146,7 @@ describe('NoteDetailPage', () => {
           error: null,
         }),
       },
-    } as any);
+    } as unknown as ReturnType<typeof import('@/lib/supabase/server').createClient>);
 
     vi.mocked(notesDb.getNoteById).mockResolvedValue(mockNote);
     vi.mocked(summariesDb.getSummaryByNoteId).mockResolvedValue(null);
@@ -169,7 +169,7 @@ describe('NoteDetailPage', () => {
           error: null,
         }),
       },
-    } as any);
+    } as unknown as ReturnType<typeof import('@/lib/supabase/server').createClient>);
 
     vi.mocked(notesDb.getNoteById).mockResolvedValue(mockNote);
     vi.mocked(summariesDb.getSummaryByNoteId).mockResolvedValue(null);
@@ -198,7 +198,7 @@ describe('NoteDetailPage', () => {
           error: null,
         }),
       },
-    } as any);
+    } as unknown as ReturnType<typeof import('@/lib/supabase/server').createClient>);
 
     vi.mocked(notesDb.getNoteById).mockResolvedValue(mockNote);
     vi.mocked(summariesDb.getSummaryByNoteId).mockResolvedValue(null);
@@ -223,7 +223,7 @@ describe('NoteDetailPage', () => {
           error: null,
         }),
       },
-    } as any);
+    } as unknown as ReturnType<typeof import('@/lib/supabase/server').createClient>);
 
     // getNoteById가 null을 반환 (권한 없음)
     vi.mocked(notesDb.getNoteById).mockResolvedValue(null);
@@ -249,7 +249,7 @@ describe('NoteDetailPage', () => {
           error: null,
         }),
       },
-    } as any);
+    } as unknown as ReturnType<typeof import('@/lib/supabase/server').createClient>);
 
     vi.mocked(notesDb.getNoteById).mockResolvedValue(mockNote);
     vi.mocked(summariesDb.getSummaryByNoteId).mockResolvedValue(null);
@@ -278,7 +278,7 @@ describe('NoteDetailPage', () => {
           error: null,
         }),
       },
-    } as any);
+    } as unknown as ReturnType<typeof import('@/lib/supabase/server').createClient>);
 
     vi.mocked(notesDb.getNoteById).mockResolvedValue(mockNote);
     vi.mocked(summariesDb.getSummaryByNoteId).mockResolvedValue(null);
@@ -305,7 +305,7 @@ describe('NoteDetailPage', () => {
           error: null,
         }),
       },
-    } as any);
+    } as unknown as ReturnType<typeof import('@/lib/supabase/server').createClient>);
 
     vi.mocked(notesDb.getNoteById).mockResolvedValue(mockNote);
     vi.mocked(summariesDb.getSummaryByNoteId).mockResolvedValue(null);
@@ -329,7 +329,7 @@ describe('NoteDetailPage', () => {
           error: null,
         }),
       },
-    } as any);
+    } as unknown as ReturnType<typeof import('@/lib/supabase/server').createClient>);
 
     vi.mocked(notesDb.getNoteById).mockResolvedValue(mockNote);
     vi.mocked(summariesDb.getSummaryByNoteId).mockResolvedValue(null);
